@@ -132,8 +132,56 @@ namespace NRTDP.ReportConverter
 
 this.WriteEndElement();
             }
+
+
+
+            foreach (var ResultSet in resultSets)
+            {
+             
+
+                this.WriteStartElement("ProteinDetection");
+                this.WriteAttributeString("id", $"PD_{ResultSet.Key}");
+                this.WriteAttributeString("proteinDetectionProtocol_ref", $"PDP_{ResultSet.Value}");
+                this.WriteAttributeString("proteinDetectionList_ref", $"PDL_{ResultSet.Key}");
+                //this.WriteAttributeString("activityDate", $"{DateTime.Now}");
+
+
+
+                    this.WriteStartElement("InputSpectrumIdentifications");
+                    this.WriteAttributeString("spectrumIdentificationList_ref", $"SIL_{ResultSet.Key}");
+                    this.WriteEndElement();
+
+              
+                this.WriteEndElement();
+            }
+
+
+
             this.WriteEndElement();
-        }
+
+            //AnalysisProtocolCollection
+            this.WriteStartElement("AnalysisCollection");
+
+            //forEach SIP
+            foreach (var ResultSet in resultSets)
+            {
+                this.WriteStartElement("SpectrumIdentificationProtocol");
+                this.WriteAttributeString("id", $"SI_{ResultSet.Key}");
+                this.WriteAttributeString("name", $"SI_{ResultSet.Value}");
+                this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
+                this.WriteStartElement("SearchType");
+                this.WriteCVParam("MS:1001083", "ms-ms search");
+                this.WriteEndElement();
+
+
+
+                this.WriteEndElement();
+            }
+
+            }
+
+
+
 
         public void WriteSequenceCollection(OpenTDReport db, double FDR)
         {
