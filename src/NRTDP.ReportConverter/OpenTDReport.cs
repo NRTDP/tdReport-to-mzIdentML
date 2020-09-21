@@ -42,7 +42,21 @@ namespace NRTDP.ReportConverter
 
 
         }
+        public Dictionary<string, double> GetMassTable()
+        {
+            var outDict = new Dictionary<string, double>();
+            var entry_quiry = from aa in _db.AminoAcid
+                              select new { Symbol = aa.Symbol, Mass = aa.MonoisotopicMass };
+            var results = entry_quiry.ToList();
 
+
+            foreach (var res in results)
+            {
+                
+                    outDict[res.Symbol] = res.Mass;
+            }
+            return outDict;
+        }
 
         public Dictionary<int, string> GetResultSets()
         {
@@ -58,6 +72,52 @@ namespace NRTDP.ReportConverter
             }
             return outDict;
         }
+
+        public Dictionary<string, string> GetResultSetParameters(int ResultSetId)
+        {
+            var quiry = from para in _db.ResultParameter
+                        where para.ResultSetId == ResultSetId
+                        select new { Name = para.Name, Value = para.Value };
+
+                        var results = quiry.ToList();
+
+            var outDict = new Dictionary<string, string>();
+            foreach (var res in results)
+            {
+                
+                    outDict[res.Name] = res.Value;
+            }
+            return outDict;
+
+        }
+
+        public Dictionary<string, Dictionary<string, string>> GetParameters()
+        {
+            var quiry = from para in _db.ResultParameter
+                        where para.GroupName != null
+                        select new {groupName = para.GroupName,  Name = para.Name, Value = para.Value };
+
+            var results = quiry.ToList();
+
+            var outDict = new Dictionary<string, Dictionary<string, string>>();
+            foreach (var res in results)
+            {
+                if (!outDict.ContainsKey(res.groupName))
+                {
+                    outDict[res.groupName] = new Dictionary<string, string>();
+                    outDict[res.groupName][res.Name] = res.Value;
+                }
+                else
+                {
+outDict[res.groupName][res.Name] = res.Value;
+                }
+
+                    
+            }
+            return outDict;
+
+        }
+
 
         public Dictionary<int,Tuple<string,string>> GetDataFiles()
         {

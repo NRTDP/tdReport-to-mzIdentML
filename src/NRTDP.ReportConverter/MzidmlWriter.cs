@@ -1,6 +1,7 @@
 ﻿using SQLitePCL;
 using System;
 using System.IO;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Xml;
 
@@ -59,6 +60,29 @@ namespace NRTDP.ReportConverter
 
             this.WriteEndElement();
         }
+
+
+        private void WriteUserParam(string name, string value = "", string type = "", string unitRef = "", string unitAccession = "", string unitName = "")
+        {
+            this.WriteStartElement("userParam");
+            this.WriteAttributeString("name", name);
+
+            if (!string.IsNullOrEmpty(type))
+                this.WriteAttributeString("type", type);
+
+         
+            this.WriteAttributeString("value", value);
+
+            if (!string.IsNullOrEmpty(unitRef))
+            {
+                this.WriteAttributeString("unitCvRef", unitRef);
+                this.WriteAttributeString("unitAccession", unitAccession);
+                this.WriteAttributeString("unitName", unitName);
+            }
+
+            this.WriteEndElement();
+        }
+
         public void WriteMzIDStartElement(string name)
         {
             this.WriteStartElement("MzIdentML", "http://psi.hupo.org/ms/mzml");
@@ -104,6 +128,7 @@ namespace NRTDP.ReportConverter
         {
             var rawFiles = db.GetDataFiles();
             var resultSets = db.GetResultSets();
+            var massTable = db.GetMassTable();
             this.WriteStartElement("AnalysisCollection");
             foreach (var ResultSet in resultSets)
             {
@@ -171,6 +196,44 @@ this.WriteEndElement();
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("SearchType");
                 this.WriteCVParam("MS:1001083", "ms-ms search");
+                this.WriteEndElement();
+
+                this.WriteStartElement("AdditionalSearchParams"); //What to put here!? do UserPArams for now
+                var ResultSetParameters = db.GetResultSetParameters(ResultSet.Key);
+                var parameters =  db.GetParameters();
+
+                foreach (var parameter in ResultSetParameters)
+                {
+                    this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}",parameter.Value);
+                }
+                foreach (var parameterGroup in parameters)
+                {
+                    if (parameterGroup.Key != "Generate Report" && parameterGroup.Key != "Generate SAS Input")
+                    {
+ foreach (var parameter in parameterGroup.Value)
+                    {
+                        this.WriteUserParam($"{parameterGroup.Key} - {parameter.Key}", parameter.Value);
+                    }
+                    }
+                   
+                    
+                }
+
+                this.WriteEndElement();
+
+
+                this.WriteStartElement("MassTable");
+                this.WriteAttributeString("id", $"MT");
+                this.WriteAttributeString("msLevel", "1 2");
+                foreach (var aa in massTable)
+                {
+                    this.WriteStartElement("Residue");
+                    this.WriteAttributeString("code", $"{aa.Key}");
+                    this.WriteAttributeString("mass", $"{aa.Value}");
+                    this.WriteEndElement();
+                }
+
+                //To Do add ambigous residues - what do the values mean!?
                 this.WriteEndElement();
 
 

@@ -33,11 +33,38 @@ namespace NRTDP.ReportConverter
 
         public DbSet<ResultSet> ResultSet { get; set; }
 
+        public DbSet<AminoAcid> AminoAcid { get; set; }
+
+        public DbSet<ResultParameter> ResultParameter { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder options)
 
             => options.UseSqlite($"Data Source={_tDReport}");
 
 
+
+    }
+
+    public class ResultParameter
+    {
+        [Key]
+        public int Id { get; set; }
+        public string? GroupName { get; set; }
+        public string  Name { get; set; }
+        public string Value { get; set; }
+        public int? ResultSetId { get; set; }
+
+    }
+    public class AminoAcid
+    {
+        [Key]
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Symbol { get; set; }
+        public string ExtendedSymbol { get; set; }
+        public double MonoisotopicMass { get; set; }
+        public double AverageMass { get; set; }
+        public string Formula { get; set; }
 
     }
 
