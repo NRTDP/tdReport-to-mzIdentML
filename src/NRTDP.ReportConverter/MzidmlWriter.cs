@@ -1,9 +1,11 @@
 ﻿using SQLitePCL;
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Xml;
+using ThermoFisher.BioPharma.Data.Entities;
 
 namespace NRTDP.ReportConverter
 {
@@ -19,7 +21,7 @@ namespace NRTDP.ReportConverter
         public static void ConvertToMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
-
+          
             var _db = new OpenTDReport(inputFileInfo.FullName);
 
             // Write the opening and short xml with a single stream 
@@ -35,16 +37,178 @@ namespace NRTDP.ReportConverter
                 writer.WriteProviderAndAuditCollection();
                 writer.WriteSequenceCollection(_db, FDR);
                 writer.WriteAnalysisCollection(_db);
+                writer.WriteDataCollection(_db, inputFileInfo, FDR);
             }
 
 
 
 
         }
-        private void WriteCVParam(string accession, string name, string value = "", string unitRef = "", string unitAccession = "", string unitName = "")
+
+        public void WriteDataCollection(OpenTDReport db,FileInfo inputFileInfo, double FDR)
+        {
+            this.WriteStartElement("DataCollection");
+            this.WriteStartElement("Inputs");
+            this.WriteStartElement("SourceFile");
+            this.WriteAttributeString("location", $@"{inputFileInfo.FullName}");
+            this.WriteAttributeString("id", "SF_1"); // TODO: optional Add FileFormat - needs CVparam for TDReport File
+            this.WriteEndElement();
+
+            this.WriteStartElement("SearchDatabase"); //Fake IT!
+            this.WriteAttributeString("location", "C:/123FakeSt");
+            this.WriteAttributeString("id", "db1");
+            this.WriteStartElement("DatabaseName");
+            this.WriteUserParam("Database1");
+            this.WriteEndElement();
+            this.WriteEndElement();
+
+            //SpectraDAta
+
+            var dataFiles = db.GetDataFiles();
+            foreach (var file in dataFiles)
+            {
+
+                this.WriteStartElement("SpectraData"); 
+                this.WriteAttributeString("location", file.Value.Item2);
+                this.WriteAttributeString("id", $"SD_{file.Key}");
+                this.WriteAttributeString("name", $"SD_{file.Value.Item1}");
+                this.WriteStartElement("FileFormat");
+                this.WriteCVParam("MS:1000563", "Thermo RAW format");
+                this.WriteEndElement();
+
+                this.WriteStartElement("SpectrumIDFormat");
+                this.WriteCVParam("MS:1000768", "Thermo nativeID format");
+                this.WriteEndElement();
+
+                this.WriteEndElement();
+            }
+          
+            this.WriteEndElement(); //End inputs
+
+
+            //AnalysisData goes here
+          
+            this.WriteAnalysisData(db, FDR);
+
+            this.WriteEndElement(); //End DataCollection
+        }
+        public void WriteAnalysisData(OpenTDReport db, double FDR)
+        {
+            var rawFiles = db.GetDataFiles();
+            var resultSets = db.GetResultSets();
+
+            this.WriteStartElement("AnalysisData");
+            foreach (var resultSet in resultSets)
+            {
+                //Write  SpectrumIdentificationList
+                this.WriteStartElement("SpectrumIdentificationList");
+                this.WriteAttributeString("id", $"SIL_{resultSet.Key}");
+                this.WriteAttributeString("name", $"{resultSet.Value}");
+
+                //Fragmentation Table
+                this.WriteStartElement("FragmentationTable");
+                this.WriteStartElement("Measure");
+                this.WriteAttributeString("id", "m_mz");
+                this.WriteCVParam("MS:1001225", "product ion m/z");
+                this.WriteEndElement();
+
+                this.WriteStartElement("Measure");
+                this.WriteAttributeString("id", "m_intensity");
+                this.WriteCVParam("MS:1001226", "product ion intensity");
+                this.WriteEndElement();
+
+                this.WriteStartElement("m_error");
+                this.WriteAttributeString("id", "m_mz");
+                this.WriteCVParam( "MS:1001227", "product ion m/z error",unitRef: "PSI-MS", unitAccession: "MS:1000040",unitName: "m/z");
+                this.WriteEndElement();
+                this.WriteEndElement();
+
+
+                foreach (var rawfile in rawFiles)
+                {
+
+                   var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, rawfile.Key);
+                    foreach (var scan in hits)
+                    {
+//start SpectrumIdentificationResult one for each spectraData (aka raw file)
+                    this.WriteStartElement("SpectrumIdentificationResult");
+                this.WriteAttributeString("id", $"SIR_{resultSet.Key}");
+                this.WriteAttributeString("name", $"{resultSet.Value}");
+                this.WriteAttributeString("spectraData_ref", $"SD_{rawfile.Key}");
+                        this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {scan.Key}");
+                        
+                    foreach (var hit in hits[scan.Key])
+                    {
+
+                        this.WriteStartElement("SpectrumIdentificationItem");
+                        this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{rawfile.Key}");
+                        this.WriteAttributeString("calculatedMassToCharge", $"{hit.Value.TheoPreMass + 1.00728}");
+                        this.WriteAttributeString("chargeState", $"1");
+                        this.WriteAttributeString("experimentalMassToCharge", $"{hit.Value.ObsPreMass + 1.00728}");
+                        this.WriteAttributeString("peptide_ref", $"Chem_{hit.Value.ChemId}");
+                        this.WriteAttributeString("rank", $"1");
+                        this.WriteAttributeString("passThreshold", $"true");
+
+                        foreach (var iso in hit.Value.IsoformId)
+                        {
+                            this.WriteStartElement("PeptideEvidenceRef");
+                            this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{hit.Value.ChemId}_ISO_{iso}");
+                            this.WriteEndElement();
+                        }
+                        this.WriteStartElement("Fragmentation");
+                            foreach (var charge in hit.Value.FragmentIons)
+                            {
+                                foreach (var type in charge.Value)
+                                {
+
+                                    if (type.Key == "B" || type.Key == "C" || type.Key == "A")
+                                    {
+                                        var fragArray =  type.Value.OrderBy(x => x.IonNumber).ToArray();
+                                        this.WriteStartElement("IonType");
+                                        this.WriteAttributeString("index", $"{fragArray}");
+                                        this.WriteAttributeString("charge", $"{charge.Key}");
+                                        this.WriteEndElement();
+                                    }
+                                    else
+                                    {
+                                        var fragArray = type.Value.OrderByDescending(x => x.IonNumber).ToArray();
+                                        this.WriteStartElement("IonType");
+                                        this.WriteAttributeString("index", $"{fragArray}"); // TODO MAKE Join!!!
+                                        this.WriteAttributeString("charge", $"{charge.Key}");
+                                        this.WriteEndElement();
+                                    }
+
+                                }
+                            }
+
+                        this.WriteEndElement();//end fragmenation
+
+                        this.WriteEndElement();
+                    }
+
+                    //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
+
+
+                    //List of all SpectrumIdentificationItems - Hits!
+
+                    this.WriteEndElement();
+                    }
+  
+
+                }
+              
+
+
+                this.WriteEndElement(); //end  SpectrumIdentificationList
+            }
+
+            this.WriteEndElement();
+        }
+
+        private void WriteCVParam(string accession, string name, string value = "",  string unitRef = "", string unitAccession = "", string unitName = "", string cvRef = "PSI-MS")
         {
             this.WriteStartElement("cvParam");
-            this.WriteAttributeString("cvRef", "PSI-MS");
+            this.WriteAttributeString("cvRef", cvRef);
             this.WriteAttributeString("accession", accession);
             this.WriteAttributeString("name", name);
 
@@ -70,8 +234,8 @@ namespace NRTDP.ReportConverter
             if (!string.IsNullOrEmpty(type))
                 this.WriteAttributeString("type", type);
 
-         
-            this.WriteAttributeString("value", value);
+            if (!string.IsNullOrEmpty(value))
+                this.WriteAttributeString("value", value);
 
             if (!string.IsNullOrEmpty(unitRef))
             {
@@ -185,8 +349,9 @@ this.WriteEndElement();
             this.WriteEndElement();
 
             //AnalysisProtocolCollection
-            this.WriteStartElement("AnalysisCollection");
+            this.WriteStartElement("AnalysisProtocolCollection");
 
+            var parameters = db.GetParameters();
             //forEach SIP
             foreach (var ResultSet in resultSets)
             {
@@ -200,11 +365,13 @@ this.WriteEndElement();
 
                 this.WriteStartElement("AdditionalSearchParams"); //What to put here!? do UserPArams for now
                 var ResultSetParameters = db.GetResultSetParameters(ResultSet.Key);
-                var parameters =  db.GetParameters();
+              
+
 
                 foreach (var parameter in ResultSetParameters)
                 {
-                    this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}",parameter.Value);
+                    if (parameter.Key != "fragment_tolerance" && parameter.Key != "precursor_window_tolerance")
+                        this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}",parameter.Value);
                 }
                 foreach (var parameterGroup in parameters)
                 {
@@ -236,11 +403,85 @@ this.WriteEndElement();
                 //To Do add ambigous residues - what do the values mean!?
                 this.WriteEndElement();
 
+this.WriteStartElement("FragmentTolerance");
+
+                if (ResultSetParameters["fragment_tolerance"].TrimEnd(null).EndsWith("ppm"))
+                {
+                    var tol = Double.Parse(ResultSetParameters["fragment_tolerance"].Remove(ResultSetParameters["fragment_tolerance"].IndexOf('p'), 3));
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                }
+                else if (ResultSetParameters["fragment_tolerance"].TrimEnd(null).EndsWith("Da"))
+                {
+                    var tol = Double.Parse(ResultSetParameters["fragment_tolerance"].Remove(ResultSetParameters["fragment_tolerance"].LastIndexOf('D'), 2));
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}","UO", "UO:0000221", "dalton");
+                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
+                }
+
+                this.WriteEndElement();
+
+
+                this.WriteStartElement("precursor_window_tolerance");
+
+                if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("ppm"))
+                {
+
+                    var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].IndexOf('p'), 3));
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                }
+                else if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("Da"))
+                {
+                    var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].LastIndexOf('D'), 2));
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000221", "dalton");
+                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
+                }
+              
+
+                this.WriteEndElement();
+
+this.WriteStartElement("Threshold");
+                this.WriteCVParam("MS:1001448", "pep:FDR threshold"); //do we need a proteoform level FDR CV?
+                this.WriteEndElement();
+this.WriteEndElement();
+                  
+            }
+
+
+
+            //ForEach PDP
+            foreach (var ResultSet in resultSets)
+            {
+                this.WriteStartElement("ProteinDetectionProtocol");
+                this.WriteAttributeString("id", $"PDP_{ResultSet.Value}");
+          
+                this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
+                this.WriteStartElement("AnalysisParams");
+
+
+
+                //protein determination parameters and report generation?
+                foreach (var par in parameters["Generate Report"])
+                {
+                    this.WriteUserParam($"Generate Report - {par.Key}", par.Value);
+                }
+                foreach (var par in parameters["Generate SAS Input"])
+                {
+                    this.WriteUserParam($"Generate SAS Input - {par.Key}", par.Value);
+
+                }
+
 
 
                 this.WriteEndElement();
+             this.WriteStartElement("Threshold");
+                this.WriteCVParam("MS:1001447", "prot:FDR threshold"); //do we need a proteoform level FDR CV?
+                this.WriteEndElement();
+                this.WriteEndElement();  
+                
             }
 
+                this.WriteEndElement();
             }
 
 
@@ -249,8 +490,10 @@ this.WriteEndElement();
         public void WriteSequenceCollection(OpenTDReport db, double FDR)
         {
 
+            
+
             this.WriteStartElement("SequenceCollection");
-            var isofroms = db.GetDBSequences(0.05);
+            var isofroms = db.GetDBSequences(FDR);
 
             foreach (var isform in isofroms)
             {
@@ -258,10 +501,10 @@ this.WriteEndElement();
             }
 
 
-            var peptides = db.GetChemicalProteoforms(0.05);
+            var peptides = db.GetChemicalProteoforms(FDR);
 
 
-            //Write Peptides
+            //Write Peptides - using BiologicalProteoformId as id
             foreach (var peptide in peptides)
             {
                 this.WriteStartElement("Peptide");
@@ -269,29 +512,72 @@ this.WriteEndElement();
                 this.WriteStartElement("PeptideSequence");
                 _writer.WriteString(peptide.Sequence);
                 this.WriteEndElement();
+
+                //C-Terminal Mods
+                if (peptide.CterminalModID != null)
+                {
+                    var Ctermmod = db.ModLookup(peptide.CterminalModID, peptide.CterminalModSetID);
+                    this.WriteStartElement("Modification");
+                    this.WriteAttributeString("location", $"{peptide.Sequence.Length+1}");
+                    this.WriteAttributeString("monoisotopicMassDelta", $"{Ctermmod.DiffMono}");
+                    this.WriteAttributeString("avgMassDelta", $"{Ctermmod.DiffAverage}");
+                    this.WriteCVParam($"{peptide.CterminalModSetID}:{peptide.CterminalModID}",Ctermmod.ModName, cvRef: peptide.CterminalModSetID);
+                    this.WriteEndElement();
+
+                }
+                //N-Terminal Mods
+                if (peptide.NterminalModID != null)
+                {
+                    var Ntermmod = db.ModLookup(peptide.NterminalModID, peptide.NterminalModSetID);
+                    this.WriteStartElement("Modification");
+                    this.WriteAttributeString("location", $"0");
+                    this.WriteAttributeString("monoisotopicMassDelta", $"{Ntermmod.DiffMono}");
+                    this.WriteAttributeString("avgMassDelta", $"{Ntermmod.DiffAverage}");
+                    this.WriteCVParam($"{peptide.NterminalModSetID}:{peptide.NterminalModID}", Ntermmod.ModName, cvRef: peptide.NterminalModSetID);
+                    this.WriteEndElement();
+                }
+                //Add internal Mods
+                if (peptide.ModificationHash != null)
+                {
+                    var pepmods = db.GetMods(peptide.ID);
+                    foreach (var pepmod in pepmods)
+                    {
+                        this.WriteStartElement("Modification");
+                        this.WriteAttributeString("location", $"{pepmod.StartIndex}");
+                        this.WriteAttributeString("monoisotopicMassDelta", $"{pepmod.DiffMono}");
+                        this.WriteAttributeString("avgMassDelta", $"{pepmod.DiffAverage}");
+                        this.WriteAttributeString("residues", $"{pepmod.AminoAcid}");
+                        this.WriteCVParam($"{pepmod.ModSetId}:{pepmod.ModId}", pepmod.ModName, cvRef: pepmod.ModSetId);
+                        this.WriteEndElement();
+                    }
+
+                }
+                
+
+                //this.WriteEndElement();
                 this.WriteEndElement();
             }
-
-            foreach (var peptide in peptides)
+            var bioProforms = db.GetBiologicalProteoforms(FDR);
+            foreach (var bioPForm in bioProforms)
             {
                 char pre = '-';
                 char post = '-';
-                if (peptide.StartIndex != 0)
+                if (bioPForm.StartIndex != 0)
                 {
-                    pre = peptide.Sequence[peptide.StartIndex - 1];
+                    pre = bioPForm.IsoformSeqence[bioPForm.StartIndex - 1];
                 }
 
-                if (peptide.EndIndex != peptide.Sequence.Length - 1)
+                if (bioPForm.EndIndex != bioPForm.Sequence.Length - 1)
                 {
-                    post = peptide.Sequence[peptide.Sequence.Length - 1];
+                    post = bioPForm.Sequence[bioPForm.Sequence.Length - 1];
                 }
 
                 this.WriteStartElement("PeptideEvidence");
-                this.WriteAttributeString("id", $"PE_Chem_{peptide.ID}_ISO_{peptide.DBSequenceID}");
-                this.WriteAttributeString("dBSequence_ref", $"{peptide.DBSequenceID}");
-                this.WriteAttributeString("peptide_ref", $"{peptide.ID}");
-                this.WriteAttributeString("start", $"{peptide.StartIndex}");
-                this.WriteAttributeString("end", $"{peptide.EndIndex}");
+                this.WriteAttributeString("id", $"PE_Chem_{bioPForm.ChemId}_ISO_{bioPForm.DBSequenceID}");
+                this.WriteAttributeString("dBSequence_ref", $"{bioPForm.DBSequenceID}");
+                this.WriteAttributeString("peptide_ref", $"{bioPForm.ID}");
+                this.WriteAttributeString("start", $"{bioPForm.StartIndex}");
+                this.WriteAttributeString("end", $"{bioPForm.EndIndex}");
                 this.WriteAttributeString("pre", $"{pre}");
                 this.WriteAttributeString("post", $"{post}");
                 this.WriteAttributeString("isDecoy", $"false");

@@ -1,8 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.EMMA;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TopDown;
+using TopDown.HighThroughput;
+using TopDown.Quant;
+using TopDown.Search;
+using TopDown.SpectralProcessing;
+using TopDown.Thermo;
 
 namespace NRTDP.ReportConverter
 {
@@ -88,7 +95,6 @@ namespace NRTDP.ReportConverter
                     outDict[res.Name] = res.Value;
             }
             return outDict;
-
         }
 
         public Dictionary<string, Dictionary<string, string>> GetParameters()
@@ -136,7 +142,7 @@ outDict[res.groupName][res.Name] = res.Value;
         }
 
 
-        public List<ChemicalProetoform> GetChemicalProteoforms(double FDR)
+        public IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR)
         {
             var entry_quiry = from h in _db.Hit
                               join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
@@ -145,19 +151,195 @@ outDict[res.groupName][res.Name] = res.Value;
                              
 
                               join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
-                              join q2 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 2 } equals new { ID = q2.HitId, agg = q2.AggregationLevel }
-                              where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                              join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                          where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+ group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id,Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId,StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by bio.Id into group1
+                            
+                               select new  BiologicalProetoform {ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence) ,ID = group1.Key, Sequence = group1.Max(x=>x.Sequence),ModificationHash = group1.Max(x=>x.ModificationHash), DBSequenceID = group1.Max(x=>x.DBSequenceID), CterminalModID = group1.Max(x=>x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+                              ;
 
-                              select new ChemicalProetoform {ID = c.Id,Sequence = I.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = I.Id, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId,StartIndex = bio.StartIndex, EndIndex = bio.EndIndex };
+            var output =  entry_quiry.ToList();
 
-            return entry_quiry.ToList();
+            return output;
 
         }
+        public IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR)
+        {
+            var entry_quiry = from h in _db.Hit
+                              join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                              join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
+                              join I in _db.Isoform on bio.IsoformId equals I.Id
+
+
+                              join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                              join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                              where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                              group new { ChemId = c.Id, IsoSequence = I.Sequence, BioId = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by c.Id into group1
+
+                              select new ChemicalProetoform { BioId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+                              ;
+
+            var output = entry_quiry.ToList();
+
+            return output;
+
+        }
+
+        // I don;t like this! probably best to include this is the get petptides method
+        public BioMod ModLookup(int? modId, string? ModificationSetId)
+        {
+            var entry_quiry = from m in _db.Modification
+
+                              where m.Id == modId && m.ModificationSetId == ModificationSetId
+                              select new BioMod {DiffAverage = m.DiffAverage, DiffMono = m.DiffMonoisotopic, ModName = m.Name}
+                               ;
+           return entry_quiry.FirstOrDefault();
+
+        }
+
+
+        public IList<BioMod> GetMods(int ChemID)
+        {
+            var entry_quiry = from cf in _db.ChemicalProteoformFeature
+                              join m in _db.Modification on cf.ModificationId equals m.Id
+
+                              where cf.ChemicalProteoformId == ChemID
+                              group new BioMod{ModTypeId = m.ModificationTypeId, ModSetId = cf.ModificationSetId, ChemId = ChemID, AminoAcid = m.AminoAcid, DiffAverage = m.DiffAverage, DiffMono = m.DiffMonoisotopic, ModId = m.Id, ModName=m.Name,StartIndex = cf.StartIndex} by cf.ChemicalProteoformId into g1
+                              select new BioMod { ModTypeId = g1.Max(x=>x.ModTypeId), ModSetId = g1.Max(x => x.ModSetId), ChemId = ChemID, AminoAcid = g1.Max(x => x.AminoAcid), DiffAverage = g1.Max(x => x.DiffAverage), DiffMono = g1.Max(x => x.DiffMono), ModId = g1.Max(x => x.ModId), ModName = g1.Max(x => x.ModName), StartIndex = g1.Max(x => x.StartIndex) }
+                               ;
+
+            var output = entry_quiry.ToList();
+
+            return output;
+        }
+
+        public Dictionary<int, Dictionary<string, IList<FragmentIon>>> GetFragmentsforHit(int hitId)
+        {
+            var frag_query = from h in _db.Hit
+                             join f in _db.MatchingIon on h.Id equals f.HitId
+                             where h.Id == hitId
+                             select new FragmentIon{ ObservedMz = f.ObservedMz, TheoreticalMz = f.TheoreticalMz, Charge = f.Charge, IonNumber = f.IonNumber, IonType = f.IonTypeId };
+            
+            var output = frag_query.ToList();
+
+            var chargeIonTypeFragDict = new Dictionary<int, Dictionary<string, IList<FragmentIon>>>();
+
+            foreach (var ion in output)
+            {
+                if (!chargeIonTypeFragDict.ContainsKey(ion.Charge))
+                {
+                    chargeIonTypeFragDict[ion.Charge] = new Dictionary<string, IList<FragmentIon>>();
+                    chargeIonTypeFragDict[ion.Charge][ion.IonType] = new List<FragmentIon> { ion };
+                }
+                else if (!chargeIonTypeFragDict[ion.Charge].ContainsKey(ion.IonType))
+                {
+                    chargeIonTypeFragDict[ion.Charge][ion.IonType] = new List<FragmentIon> { ion };
+                }
+                else
+                {
+                    chargeIonTypeFragDict[ion.Charge][ion.IonType].Add(ion);
+                }
+            }
+
+            return chargeIonTypeFragDict;
+        }
+
+        public Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>> CreateBatchOfHitsWithIons(int ResultSetId,int dataFileId,double FDR=0.05)
+        {
+
+
+
+            //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
+            var hit_quiry = from h in _db.Hit
+                            join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
+                            join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                            join hToS in _db.HitToSpectrum on h.Id equals hToS.HitId
+                            join sToSH in _db.ScanHeaderToSpectrum on hToS.SpectrumId equals sToSH.SpectrumId
+                            join SH in _db.ScanHeader on sToSH.ScanHeaderId equals SH.Id
+                     
+
+                            join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                            join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+
+
+                            where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                            select new { ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
+
+                             ;
+        
+
+            var output = hit_quiry.ToList();
+
+            var outList = new Dictionary<int, Dictionary<int,SpectrumIdentificationItem_Hit>>();
+
+            foreach (var hitscan in output)
+            {
+                if (!outList.ContainsKey(hitscan.ScanNo))
+                {
+                    outList[hitscan.ScanNo] = new Dictionary<int, SpectrumIdentificationItem_Hit>();
+                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId) };
+                }
+                else if (!outList[hitscan.ScanNo].ContainsKey(hitscan.HitId))
+                    {
+                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId) };
+
+                }
+                else
+                {
+                    outList[hitscan.ScanNo][hitscan.HitId].Scans.Add(hitscan.ScanNo);
+                    outList[hitscan.ScanNo][hitscan.HitId].IsoformId.Add(hitscan.IsoformId);
+                    outList[hitscan.ScanNo][hitscan.HitId].BioId.Add(hitscan.BioId);
+                }
+            }
+            //Create Dictonary and group everything
+            return outList;
+        }
+
 
         public void Dispose()
         {
             ((IDisposable)_db).Dispose();
         }
+    }
+
+    public class SpectrumIdentificationItem_Hit
+    {
+        
+        public int ChemId { get; set; }
+        public HashSet<int> BioId { get; set; }
+        public HashSet<int> IsoformId { get; set; }
+        public double ObsPreMass { get; set; }
+        public double TheoPreMass { get; set; }
+        public HashSet<int> Scans { get; set; }
+
+        public Dictionary<int, Dictionary<string, IList<FragmentIon>>> FragmentIons { get; set; }
+
+
+    }
+
+
+
+public class FragmentIon
+    {
+ 
+        public double ObservedMz { get; set; }
+        public double TheoreticalMz { get; set; }
+        public int Charge { get; set; }
+        public int IonNumber { get; set; }
+        public string IonType { get; set; }
+
+    }
+    public class BioMod
+    {
+        public int ChemId { get; set; }
+        public string ModSetId { get; set; }
+        public int ModId { get; set; }
+        public int ModTypeId { get; set; }
+        public int StartIndex { get; set; }
+        public string ModName { get; set; }
+        public double DiffAverage { get; set; }
+        public double DiffMono { get; set; }
+        public string AminoAcid { get; set; }
     }
     public class DBSequence
     {
@@ -172,10 +354,11 @@ outDict[res.groupName][res.Name] = res.Value;
 
     }
 
-    public class ChemicalProetoform
+    public class BiologicalProetoform
     {
         public int ID { get; set; }
         public int DBSequenceID { get; set; }
+        public int ChemId { get; set; }
         public string? ModificationHash { get; set; }
         public string? NterminalModSetID { get; set; }
 
@@ -189,6 +372,31 @@ outDict[res.groupName][res.Name] = res.Value;
         public int StartIndex { get; set; }
 
         public int EndIndex { get; set; }
+        public string IsoformSeqence { get; set; }
+
+
+
+    }
+    public class ChemicalProetoform
+    {
+        public int ID { get; set; }
+        public int DBSequenceID { get; set; }
+        public int BioId { get; set; }
+        public string? ModificationHash { get; set; }
+        public string? NterminalModSetID { get; set; }
+
+        public string? CterminalModSetID { get; set; }
+
+        public int? NterminalModID { get; set; }
+
+        public int? CterminalModID { get; set; }
+
+        public string Sequence { get; set; }
+        public int StartIndex { get; set; }
+
+        public int EndIndex { get; set; }
+        public string IsoformSeqence { get; set; }
+
 
 
     }

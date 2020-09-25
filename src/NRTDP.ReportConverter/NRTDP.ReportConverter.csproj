@@ -11,6 +11,16 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="3.1.8" />
     <PackageReference Include="MSTest.TestFramework" Version="2.1.2" />
+    <PackageReference Include="TopDown.Core" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Core.Extended" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.HighThroughput" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Interfaces" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Quant" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Search" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.SpectralProcessing" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Thermo" Version="5.1.0.10" />
+    <PackageReference Include="TopDown.Thermo.CommonCore" Version="5.0.6.1" />
+    <PackageReference Include="TopDown.Thermo.ReSpect" Version="4.0.88.3" />
   </ItemGroup>
 
 </Project>

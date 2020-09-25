@@ -36,11 +36,115 @@ namespace NRTDP.ReportConverter
         public DbSet<AminoAcid> AminoAcid { get; set; }
 
         public DbSet<ResultParameter> ResultParameter { get; set; }
+        public DbSet<ChemicalProteoformFeature> ChemicalProteoformFeature { get; set; }
+        public DbSet<Modification> Modification { get; set; }
+
+        public DbSet<MatchingIon> MatchingIon { get; set; }
+        public DbSet<HitToSpectrum> HitToSpectrum { get; set; }
+        public DbSet<ScanHeaderToSpectrum> ScanHeaderToSpectrum { get; set; }
+        public DbSet<ScanHeader> ScanHeader { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
 
             => options.UseSqlite($"Data Source={_tDReport}");
 
+
+
+    }
+    public class ScanHeader
+    {
+        public int Id { get; set; }
+        public int ScanIndex { get; set; }
+        public double RetentionTime { get; set; }
+        public int DetectionType { get; set; }
+        public int Level { get; set; }
+        public double FragmentationMz { get; set; }
+        public double FragmentationMzLowerOffset { get; set; }
+        public double FragmentationMzUpperOffset { get; set; }
+
+        public string FragmentationMethodId { get; set; }
+
+        public double FragmentationEnergy { get; set; }
+
+        public double FragmentationReactionTime { get; set; }
+
+        public int DataFileId { get; set; }
+
+
+
+    }
+    public class ScanHeaderToSpectrum
+    {
+        [Key]
+        public int Id { get; set; }
+        public int ScanHeaderId { get; set; }
+        public int SpectrumId { get; set; }
+
+    }
+    public class HitToSpectrum
+    {
+        [Key]
+        public int Id { get; set; }
+        public int SpectrumId { get; set; }
+        public int HitId { get; set; }
+
+    }
+    public class MatchingIon
+    {
+        [Key]
+        public int Id { get; set; }
+        public double ObservedMz { get; set; }
+        public double TheoreticalMz { get; set; }
+        public int Charge { get; set; }
+        public int IonNumber { get; set; }
+        public int CleavageSiteIndex { get; set; }
+        public bool IsDeltaM { get; set; }
+        public string IonTypeId { get; set; }
+        public int HitId { get; set; }
+
+    }
+    public class Modification
+    {
+        [Key]
+        public int Id { get; set; }
+        public string ModificationSetId { get; set; }
+        public string SwissprotTerm { get; set; }
+
+        public string Name { get; set; }
+        public string Definition { get; set; }
+        public string Comment { get; set; }
+        public double DiffAverage { get; set; }
+        public double DiffMonoisotopic { get; set; }
+        public string DiffFormula { get; set; }
+        public string Formula { get; set; }
+        public double MassAverage { get; set; }
+        public double MassMonoisotopic { get; set; }
+        public string AminoAcid { get; set; }
+        public int Source { get; set; }
+        public int Terminus { get; set; }
+        public int FormalCharge { get; set; }
+        public bool IsObsolete { get; set; }
+        public bool IsRemoval { get; set; }
+        public bool IsSnp { get; set; }
+        public int ModificationTypeId { get; set; }
+
+
+    }
+    public class ChemicalProteoformFeature
+    {
+        [Key]
+        public int Id { get; set; }
+        public int Type { get; set; }
+        public int StartIndex { get; set; }
+        public int EndIndex { get; set; }
+        public string ReplacementSequence { get; set; }
+        public string OriginalType { get; set; }
+        public string Description { get; set; }
+
+        public string ModificationSetId { get; set; }
+        public int ModificationId { get; set; }
+        public double PriorWeight { get; set; }
+        public int ChemicalProteoformId { get; set; }
 
 
     }
