@@ -1,5 +1,6 @@
 ﻿using SQLitePCL;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -112,11 +113,6 @@ namespace NRTDP.ReportConverter
                 this.WriteCVParam("MS:1001225", "product ion m/z");
                 this.WriteEndElement();
 
-                this.WriteStartElement("Measure");
-                this.WriteAttributeString("id", "m_intensity");
-                this.WriteCVParam("MS:1001226", "product ion intensity");
-                this.WriteEndElement();
-
                 this.WriteStartElement("m_error");
                 this.WriteAttributeString("id", "m_mz");
                 this.WriteCVParam( "MS:1001227", "product ion m/z error",unitRef: "PSI-MS", unitAccession: "MS:1000040",unitName: "m/z");
@@ -127,7 +123,7 @@ namespace NRTDP.ReportConverter
                 foreach (var rawfile in rawFiles)
                 {
 
-                   var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, rawfile.Key);
+                   var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, rawfile.Key,FDR);
                     foreach (var scan in hits)
                     {
 //start SpectrumIdentificationResult one for each spectraData (aka raw file)
@@ -160,30 +156,45 @@ namespace NRTDP.ReportConverter
                             {
                                 foreach (var type in charge.Value)
                                 {
-
+                                    IEnumerable<FragmentIon> fragArray;
                                     if (type.Key == "B" || type.Key == "C" || type.Key == "A")
                                     {
-                                        var fragArray =  type.Value.OrderBy(x => x.IonNumber).ToArray();
-                                        this.WriteStartElement("IonType");
-                                        this.WriteAttributeString("index", $"{fragArray}");
-                                        this.WriteAttributeString("charge", $"{charge.Key}");
-                                        this.WriteEndElement();
+                                        fragArray =  type.Value.OrderBy(x => x.IonNumber);
                                     }
                                     else
                                     {
-                                        var fragArray = type.Value.OrderByDescending(x => x.IonNumber).ToArray();
-                                        this.WriteStartElement("IonType");
-                                        this.WriteAttributeString("index", $"{fragArray}"); // TODO MAKE Join!!!
-                                        this.WriteAttributeString("charge", $"{charge.Key}");
-                                        this.WriteEndElement();
+                                        fragArray = type.Value.OrderByDescending(x => x.IonNumber);
                                     }
+
+                                        this.WriteStartElement("IonType");
+                                        this.WriteAttributeString("index", string.Join(" ",fragArray.Select(x => x.IonNumber).ToArray()));
+                                        this.WriteAttributeString("charge", $"{charge.Key}");
+                                        this.WriteFragType(type.Key);
+                                        this.WriteStartElement("FragmentArray");
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz).ToArray()));
+                                    this.WriteAttributeString("measure_ref", "m_mz");
+                                    this.WriteEndElement();
+
+                                    this.WriteStartElement("FragmentArray");
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz - x.TheoreticalMz).ToArray()));
+                                    this.WriteAttributeString("measure_ref", "m_error");
+                                    this.WriteEndElement();
+
+                                    this.WriteEndElement();
 
                                 }
                             }
 
                         this.WriteEndElement();//end fragmenation
 
-                        this.WriteEndElement();
+                            //Make CV for these?
+                            this.WriteUserParam("Kelleher P-score", $"{hit.Value.PScore}");
+                            this.WriteUserParam("Kelleher E-value", $"{hit.Value.EValue}");
+                            this.WriteUserParam("Kelleher C-score", $"{hit.Value.CScore}");
+                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", $"{hit.Value.Cleavages}");
+                            this.WriteUserParam("Hit Q-value", $"{hit.Value.GlobalQValue}");
+
+                            this.WriteEndElement();
                     }
 
                     //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
@@ -202,7 +213,100 @@ namespace NRTDP.ReportConverter
                 this.WriteEndElement(); //end  SpectrumIdentificationList
             }
 
+
+            foreach (var resultSet in resultSets)
+            {
+                //Write  SpectrumIdentificationList
+                this.WriteStartElement("ProteinDetectionList");
+                this.WriteAttributeString("id", $"PDL_{resultSet.Key}");
+                this.WriteAttributeString("name", $"{resultSet.Value}");
+
+ 
+                foreach (var rawfile in rawFiles)
+                {
+
+                    var isoforms = db.GetproteinDetectiondata(resultSet.Key, rawfile.Key,FDR);
+                    foreach (var isoform in isoforms)
+                    {
+                        //start ProteinAmbiguityGroup
+                        this.WriteStartElement("ProteinAmbiguityGroup");
+                        this.WriteAttributeString("id", $"PAG_{isoform.Key}_{resultSet.Key}_{rawfile.Key}"); // set to isform maybe entry!?
+                            this.WriteStartElement("ProteinDetectionHypothesis");
+                            this.WriteAttributeString("id", $"PDH_{isoform.Key}_{resultSet.Key}_{rawfile.Key}");
+                        this.WriteAttributeString("dBSequence_ref", $"ISO_{isoform.Key}");
+                        this.WriteAttributeString("passThreshold", $"true");
+
+                        
+                        foreach (var chem in isoforms[isoform.Key])
+                        {
+                            this.WriteStartElement("PeptideHypothesis");
+                            this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{chem.Key}_ISO_{isoform.Key}");
+                            foreach (var hit in chem.Value.HitId)
+                            {
+                                this.WriteStartElement("SpectrumIdentificationItemRef");
+                                this.WriteAttributeString("spectrumIdentificationItem_ref", $"SII_Hit_{hit}_{resultSet.Key}_{rawfile.Key}");
+                                this.WriteEndElement();
+                            }
+
+                            this.WriteEndElement();
+                            
+                        }
+
+                       //this.WriteUserParam("Isoform Q-value", $"{chem.Value.GlobalQvalue}");
+
+                        this.WriteEndElement();
+                        this.WriteEndElement();
+                    }
+
+
+                }
+
+
+
+                this.WriteEndElement(); 
+            }
+
             this.WriteEndElement();
+        }
+
+        private void WriteFragType(string fragType)
+        {
+            switch (fragType)
+            {
+                case "A":
+                    {
+                        this.WriteCVParam("MS:1001229", "frag: a ion");
+                    }
+                    break;
+                case "B":
+                    {
+                        this.WriteCVParam("MS:1001224", "frag: b ion");
+                    }
+                    break;
+                case "C":
+                    {
+                        this.WriteCVParam("MS:1001231", "frag: c ion");
+                    }
+                    break;
+
+                case "X":
+                    {
+                        this.WriteCVParam("MS:1001228", "frag: x ion");
+                    }
+                    break;
+
+                case "Y":
+                    {
+                        this.WriteCVParam("MS:1001220", "frag: y ion");
+                    }
+                    break;
+
+                case "Z":
+                    {
+                        this.WriteCVParam("MS:1001230", "frag: z ion");
+                    }
+                    break;
+            }
         }
 
         private void WriteCVParam(string accession, string name, string value = "",  string unitRef = "", string unitAccession = "", string unitName = "", string cvRef = "PSI-MS")

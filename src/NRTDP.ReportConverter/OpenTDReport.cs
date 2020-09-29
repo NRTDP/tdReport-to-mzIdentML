@@ -1,9 +1,11 @@
 ﻿using DocumentFormat.OpenXml.EMMA;
+using DocumentFormat.OpenXml.Office2013.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using TopDown;
 using TopDown.HighThroughput;
 using TopDown.Quant;
@@ -256,14 +258,18 @@ outDict[res.groupName][res.Name] = res.Value;
                             join hToS in _db.HitToSpectrum on h.Id equals hToS.HitId
                             join sToSH in _db.ScanHeaderToSpectrum on hToS.SpectrumId equals sToSH.SpectrumId
                             join SH in _db.ScanHeader on sToSH.ScanHeaderId equals SH.Id
-                     
+
+                            join ps in _db.HitScore on new { id = h.Id, type = 2020 } equals new {id = ps.HitId, type = ps.ScoreTypeId }
+                            join es in _db.HitScore on new { id = h.Id, type = 2022 } equals new { id = es.HitId, type = es.ScoreTypeId }
+                            join cs in _db.HitScore on new { id = h.Id, type = 2023 } equals new { id = cs.HitId, type = cs.ScoreTypeId }
+                            join pcs in _db.HitScore on new { id = h.Id, type = 2024 } equals new { id = pcs.HitId, type = pcs.ScoreTypeId }
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
 
 
                             where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new { ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
+                            select new {gqvalue=q1.GlobalQvalue, pscore = ps.Value,escore = es.Value, cscore = cs.Value, Cleavages = pcs.Value, ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
 
                              ;
         
@@ -277,11 +283,11 @@ outDict[res.groupName][res.Name] = res.Value;
                 if (!outList.ContainsKey(hitscan.ScanNo))
                 {
                     outList[hitscan.ScanNo] = new Dictionary<int, SpectrumIdentificationItem_Hit>();
-                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId) };
+                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { GlobalQValue = hitscan.gqvalue, BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId), PScore = hitscan.pscore, CScore = hitscan.cscore, EValue=hitscan.escore, Cleavages=hitscan.Cleavages };
                 }
                 else if (!outList[hitscan.ScanNo].ContainsKey(hitscan.HitId))
                     {
-                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId) };
+                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit {GlobalQValue = hitscan.gqvalue, BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId), PScore = hitscan.pscore, CScore = hitscan.cscore, EValue = hitscan.escore, Cleavages = hitscan.Cleavages };
 
                 }
                 else
@@ -296,12 +302,71 @@ outDict[res.groupName][res.Name] = res.Value;
         }
 
 
+        public Dictionary<int, Dictionary<int, ProteinAmbiguityGroup>> GetproteinDetectiondata(int ResultSetId, int dataFileId, double FDR = 0.05)
+        {
+
+            var hit_quiry = from h in _db.Hit
+                            join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
+                            join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                         
+
+                          
+
+                            join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                            join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+
+
+                            where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id}
+
+                             ;
+
+
+            var output = hit_quiry.ToList();
+
+            var outList = new Dictionary<int, Dictionary<int, ProteinAmbiguityGroup>>();
+
+            foreach (var hitscan in output)
+            {
+                if (!outList.ContainsKey(hitscan.IsoformId))
+                {
+                    outList[hitscan.IsoformId] = new Dictionary<int, ProteinAmbiguityGroup>();
+                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { GlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId } , ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId , HitId = new HashSet<int> { hitscan.HitId } };
+                }
+                else if (!outList[hitscan.IsoformId].ContainsKey(hitscan.ChemId))
+                {
+                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { GlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId } , ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
+
+                }
+                else
+                {
+                    outList[hitscan.IsoformId][hitscan.ChemId].HitId.Add(hitscan.HitId);
+                    outList[hitscan.IsoformId][hitscan.ChemId].BioId.Add(hitscan.BioId);
+                }
+      
+            }
+            //Create Dictonary and group everything
+            return outList;
+        }
+
+
         public void Dispose()
         {
             ((IDisposable)_db).Dispose();
         }
     }
 
+
+
+    public class ProteinAmbiguityGroup
+    {
+        public HashSet<int> HitId { get; set; }
+        public int ChemId { get; set; }
+        public HashSet<int> BioId { get; set; }
+        public int IsoformId { get; set; }
+        public double GlobalQvalue { get; set; }
+
+    }
     public class SpectrumIdentificationItem_Hit
     {
         
@@ -313,6 +378,14 @@ outDict[res.groupName][res.Name] = res.Value;
         public HashSet<int> Scans { get; set; }
 
         public Dictionary<int, Dictionary<string, IList<FragmentIon>>> FragmentIons { get; set; }
+
+        public double PScore { get; set; }
+        public double EValue { get; set; }
+        public double CScore { get; set; }
+        public double Cleavages { get; set; }
+        public double GlobalQValue { get; set; }
+
+
 
 
     }

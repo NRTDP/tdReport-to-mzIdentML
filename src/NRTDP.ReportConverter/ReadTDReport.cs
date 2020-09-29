@@ -251,8 +251,8 @@ namespace NRTDP.ReportConverter
         public int Id { get; set; }
         public int AggregationLevel { get; set; }
         public int ExternalId { get; set; }
-        public double? GlobalQvalue { get; set; }
-        public double? GlobalQvalueCharacterized { get; set; }
+        public double GlobalQvalue { get; set; }
+        public double GlobalQvalueCharacterized { get; set; }
         public int HitId { get; set; }
 
     }
