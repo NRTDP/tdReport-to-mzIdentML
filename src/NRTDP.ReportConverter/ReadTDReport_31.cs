@@ -1,15 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NRTDP.TDReport4;
 using System;
 using System.ComponentModel.DataAnnotations;
 
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.TDReport31
 {
-    public class ReadTDReport : DbContext
+    public class ReadTDReport_31 : DbContext
     {
         private string _tDReport;
-        public ReadTDReport(string TDReport = "C:\\Data\\Golden\\TDReports\\golden_TDPortal31.tdReport")
+        public ReadTDReport_31(string TDReport = "C:\\Data\\Golden\\TDReports\\golden_TDPortal31.tdReport")
         {
             _tDReport = TDReport;
 
@@ -43,6 +44,7 @@ namespace NRTDP.ReportConverter
         public DbSet<HitToSpectrum> HitToSpectrum { get; set; }
         public DbSet<ScanHeaderToSpectrum> ScanHeaderToSpectrum { get; set; }
         public DbSet<ScanHeader> ScanHeader { get; set; }
+        public DbSet<ScoreType> ScoreType { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
 
@@ -316,6 +318,20 @@ namespace NRTDP.ReportConverter
         public int Id { get; set; }
         public string Name { get; set; }
         public bool IsActive { get; set; }
+
+    }
+    public class ScoreType
+    {
+        [Key]
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string KeyWord { get; set; }
+        public string Format { get; set; }
+        public double BadValueRange { get; set; }
+        public double GoodValueRange { get; set; }
+        public int iSLogScale { get; set; }
+        public int ScoreDirection { get; set; }
 
     }
 }

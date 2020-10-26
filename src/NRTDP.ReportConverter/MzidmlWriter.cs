@@ -10,6 +10,9 @@ using ThermoFisher.BioPharma.Data.Entities;
 
 namespace NRTDP.ReportConverter
 {
+
+    //TODO!! Change to output one Mzid for eacdh raw file
+    // output peak list file too
     public sealed class MzidmlWriter : IDisposable
     {
         private XmlWriter _writer;
@@ -23,7 +26,11 @@ namespace NRTDP.ReportConverter
         {
             var inputFileInfo = new FileInfo(TDReport);
           
-            var _db = new OpenTDReport(inputFileInfo.FullName);
+
+            //ToDo: Reader Type Selection 
+
+
+            var _db = new OpenTDReport_31(inputFileInfo.FullName);
 
             // Write the opening and short xml with a single stream 
             using (FileStream stream = File.Create(outputPath))
@@ -46,7 +53,7 @@ namespace NRTDP.ReportConverter
 
         }
 
-        public void WriteDataCollection(OpenTDReport db,FileInfo inputFileInfo, double FDR)
+        public void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR)
         {
             this.WriteStartElement("DataCollection");
             this.WriteStartElement("Inputs");
@@ -93,7 +100,7 @@ namespace NRTDP.ReportConverter
 
             this.WriteEndElement(); //End DataCollection
         }
-        public void WriteAnalysisData(OpenTDReport db, double FDR)
+        public void WriteAnalysisData(IOpenTDReport db, double FDR)
         {
             var rawFiles = db.GetDataFiles();
             var resultSets = db.GetResultSets();
@@ -392,7 +399,7 @@ namespace NRTDP.ReportConverter
 
         }
 
-        public void WriteAnalysisCollection(OpenTDReport db)
+        public void WriteAnalysisCollection(IOpenTDReport db)
         {
             var rawFiles = db.GetDataFiles();
             var resultSets = db.GetResultSets();
@@ -591,7 +598,7 @@ this.WriteEndElement();
 
 
 
-        public void WriteSequenceCollection(OpenTDReport db, double FDR)
+        public void WriteSequenceCollection(IOpenTDReport db, double FDR)
         {
 
             
@@ -620,7 +627,7 @@ this.WriteEndElement();
                 //C-Terminal Mods
                 if (peptide.CterminalModID != null)
                 {
-                    var Ctermmod = db.ModLookup(peptide.CterminalModID, peptide.CterminalModSetID);
+                    var Ctermmod = db.ModLookup(peptide.CterminalModID, peptide.CterminalModSetID,0,0);
                     this.WriteStartElement("Modification");
                     this.WriteAttributeString("location", $"{peptide.Sequence.Length+1}");
                     this.WriteAttributeString("monoisotopicMassDelta", $"{Ctermmod.DiffMono}");
@@ -632,7 +639,7 @@ this.WriteEndElement();
                 //N-Terminal Mods
                 if (peptide.NterminalModID != null)
                 {
-                    var Ntermmod = db.ModLookup(peptide.NterminalModID, peptide.NterminalModSetID);
+                    var Ntermmod = db.ModLookup(peptide.NterminalModID, peptide.NterminalModSetID,0,0);
                     this.WriteStartElement("Modification");
                     this.WriteAttributeString("location", $"0");
                     this.WriteAttributeString("monoisotopicMassDelta", $"{Ntermmod.DiffMono}");
@@ -643,7 +650,7 @@ this.WriteEndElement();
                 //Add internal Mods
                 if (peptide.ModificationHash != null)
                 {
-                    var pepmods = db.GetMods(peptide.ID);
+                    var pepmods = db.ParseModHash(peptide.ModificationHash ,peptide.ID);
                     foreach (var pepmod in pepmods)
                     {
                         this.WriteStartElement("Modification");
