@@ -22,7 +22,7 @@ namespace NRTDP.ReportConverter
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
-        public static void ConvertToMzId(string TDReport, string outputPath, double FDR = 0.05)
+        public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
           
@@ -31,6 +31,86 @@ namespace NRTDP.ReportConverter
 
 
             var _db = new OpenTDReport_31(inputFileInfo.FullName);
+
+            // Write the opening and short xml with a single stream 
+            using (FileStream stream = File.Create(outputPath))
+            using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
+            {
+
+
+                writer.WriteStartDoc();
+                writer.WriteMzIDStartElement(inputFileInfo.Name);
+                writer.WriteMzIDCVList();
+                writer.WriteAnalysisSoftwareList();
+                writer.WriteProviderAndAuditCollection();
+                writer.WriteSequenceCollection(_db, FDR);
+                writer.WriteAnalysisCollection(_db);
+                writer.WriteDataCollection(_db, inputFileInfo, FDR);
+            }
+
+
+
+
+        }
+
+        public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05)
+        {
+            var inputFileInfo = new FileInfo(TDReport);
+
+
+            //ToDo: Reader Type Selection 
+
+
+            var _db = new OpenTDReport_31(inputFileInfo.FullName);
+
+            var datasets = _db.GetDataFiles();
+
+            foreach (var dataset in datasets)
+            {
+                var rawFileName = dataset.Value.Item1;
+
+
+                var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid");
+                
+                // Write the opening and short xml with a single stream 
+            using (FileStream stream = File.Create(outputPath))
+            using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
+            {
+
+
+                writer.WriteStartDoc();
+                writer.WriteMzIDStartElement(inputFileInfo.Name);
+                writer.WriteMzIDCVList();
+                writer.WriteAnalysisSoftwareList();
+                writer.WriteProviderAndAuditCollection();
+                writer.WriteSequenceCollection(_db, FDR);
+                writer.WriteAnalysisCollection(_db);
+                writer.WriteDataCollection(_db, inputFileInfo, FDR);
+            }
+            }
+            
+
+
+
+
+        }
+
+        public static void ConvertToMzId(string TDReport, string outputPath,string version, double FDR = 0.05)
+        {
+            var inputFileInfo = new FileInfo(TDReport);
+
+            IOpenTDReport _db = null;
+            //ToDo: Reader Type Selection 
+
+            if (version == "3.1")
+            {
+_db = new OpenTDReport_31(inputFileInfo.FullName);
+            }
+            else if (version == "4")
+            {
+                _db = new OpenTDReport_4(inputFileInfo.FullName);
+            }
+            
 
             // Write the opening and short xml with a single stream 
             using (FileStream stream = File.Create(outputPath))
@@ -135,8 +215,8 @@ namespace NRTDP.ReportConverter
                     {
 //start SpectrumIdentificationResult one for each spectraData (aka raw file)
                     this.WriteStartElement("SpectrumIdentificationResult");
-                this.WriteAttributeString("id", $"SIR_{resultSet.Key}");
-                this.WriteAttributeString("name", $"{resultSet.Value}");
+                this.WriteAttributeString("id", $"SIR_{resultSet.Key}_{rawfile.Key}_{scan.Key}");
+                //this.WriteAttributeString("name", $"{resultSet.Value}");
                 this.WriteAttributeString("spectraData_ref", $"SD_{rawfile.Key}");
                         this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {scan.Key}");
                         
@@ -145,9 +225,9 @@ namespace NRTDP.ReportConverter
 
                         this.WriteStartElement("SpectrumIdentificationItem");
                         this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{rawfile.Key}");
-                        this.WriteAttributeString("calculatedMassToCharge", $"{hit.Value.TheoPreMass + 1.00728}");
+                        this.WriteAttributeString("calculatedMassToCharge", String.Format("{0:f5}",hit.Value.TheoPreMass + 1.00728));
                         this.WriteAttributeString("chargeState", $"1");
-                        this.WriteAttributeString("experimentalMassToCharge", $"{hit.Value.ObsPreMass + 1.00728}");
+                        this.WriteAttributeString("experimentalMassToCharge", String.Format("{0:f5}", hit.Value.ObsPreMass + 1.00728));
                         this.WriteAttributeString("peptide_ref", $"Chem_{hit.Value.ChemId}");
                         this.WriteAttributeString("rank", $"1");
                         this.WriteAttributeString("passThreshold", $"true");
@@ -178,12 +258,12 @@ namespace NRTDP.ReportConverter
                                         this.WriteAttributeString("charge", $"{charge.Key}");
                                         this.WriteFragType(type.Key);
                                         this.WriteStartElement("FragmentArray");
-                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz).ToArray()));
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz.ToString("f4")).ToArray()));
                                     this.WriteAttributeString("measure_ref", "m_mz");
                                     this.WriteEndElement();
 
                                     this.WriteStartElement("FragmentArray");
-                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz - x.TheoreticalMz).ToArray()));
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => (x.ObservedMz - x.TheoreticalMz).ToString("e4")).ToArray()));
                                     this.WriteAttributeString("measure_ref", "m_error");
                                     this.WriteEndElement();
 
@@ -195,11 +275,11 @@ namespace NRTDP.ReportConverter
                         this.WriteEndElement();//end fragmenation
 
                             //Make CV for these?
-                            this.WriteUserParam("Kelleher P-score", $"{hit.Value.PScore}");
-                            this.WriteUserParam("Kelleher E-value", $"{hit.Value.EValue}");
-                            this.WriteUserParam("Kelleher C-score", $"{hit.Value.CScore}");
-                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", $"{hit.Value.Cleavages}");
-                            this.WriteUserParam("Hit Q-value", $"{hit.Value.GlobalQValue}");
+                            this.WriteUserParam("Kelleher P-score", String.Format("{0:g4}", hit.Value.PScore));
+                            this.WriteUserParam("Kelleher E-value", String.Format("{0:g2}", hit.Value.EValue));
+                            this.WriteUserParam("Kelleher C-score", String.Format("{0:g4}", hit.Value.CScore));
+                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages));
+                            this.WriteUserParam("Hit Q-value", String.Format("{0:e4}",hit.Value.GlobalQValue));
 
                             this.WriteEndElement();
                     }
@@ -533,8 +613,9 @@ this.WriteStartElement("FragmentTolerance");
 
 
                 this.WriteStartElement("precursor_window_tolerance");
-
-                if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("ppm"))
+                if (ResultSetParameters.ContainsKey("precursor_window_tolerance"))
+                {
+ if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("ppm"))
                 {
 
                     var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].IndexOf('p'), 3));
@@ -547,6 +628,13 @@ this.WriteStartElement("FragmentTolerance");
                     this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000221", "dalton");
                     this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
                 }
+                }
+                else
+                {
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"-1", "UO", "UO:0000221", "dalton");
+                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"-1", "UO", "UO:0000221", "dalton");
+                }
+               
               
 
                 this.WriteEndElement();
@@ -572,15 +660,25 @@ this.WriteEndElement();
 
 
                 //protein determination parameters and report generation?
-                foreach (var par in parameters["Generate Report"])
+
+                if (parameters.ContainsKey("Generate Report"))
+                {
+    foreach (var par in parameters["Generate Report"])
                 {
                     this.WriteUserParam($"Generate Report - {par.Key}", par.Value);
                 }
-                foreach (var par in parameters["Generate SAS Input"])
+                }
+
+
+                if (parameters.ContainsKey("Generate SAS Input"))
+                {
+foreach (var par in parameters["Generate SAS Input"])
                 {
                     this.WriteUserParam($"Generate SAS Input - {par.Key}", par.Value);
 
                 }
+                }
+                    
 
 
 

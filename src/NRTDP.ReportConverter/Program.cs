@@ -6,7 +6,7 @@ namespace NRTDP.ReportConverter
     {
         static void Main(string[] args)
         {
-            MzidmlWriter.ConvertToMzId(@"C:\Data\Golden\TDReports\golden_TDPortal31.tdReport", @"C:\Data\Golden\TDReports\golden_newTest.mzid",0.05);
+            MzidmlWriter.ConvertToMzId(@"C:\Data\Golden\TDReports\golden_4.tdReport", @"C:\Data\Golden\TDReports\golden_4_Test.mzid","4",0.05);
         }
     }
 }

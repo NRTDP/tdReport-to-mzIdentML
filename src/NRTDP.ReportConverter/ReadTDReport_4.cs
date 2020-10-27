@@ -50,9 +50,18 @@ namespace NRTDP.TDReport4
         public DbSet<ScoreType> ScoreType { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
+        {
+options.UseSqlite($"Data Source={_tDReport}");
+           
+        }
 
-            => options.UseSqlite($"Data Source={_tDReport}");
-    }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ResultParameter>().HasNoKey();
+        }
+
+
+        }
         public class ScanHeader
         {
             public int Id { get; set; }
@@ -125,17 +134,16 @@ namespace NRTDP.TDReport4
 
 
         }
-      
 
-        public class ResultParameter
+   
+    public class ResultParameter
         {
-            [Key]
-
-            public string? GroupName { get; set; }
+        
+            public string GroupName { get; set; }
             public string Name { get; set; }
             public string Value { get; set; }
-        public string SearchName { get; set; }
-        public int? ResultSetId { get; set; }
+            public string SearchName { get; set; }
+            public int? ResultSetId { get; set; }
 
         }
         public class AminoAcid

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using NRTDP.TDReport4;
 
 namespace NRTDP.ReportConverter
@@ -9,7 +10,7 @@ namespace NRTDP.ReportConverter
     {
         private ReadTDReport_4 _db;
         private string _path;
-        private Dictionary<string, int> _scoreType;
+        private Dictionary<string, int> _scoreType = new Dictionary<string, int>();
 
         public OpenTDReport_4(string path)
         {
@@ -98,11 +99,23 @@ namespace NRTDP.ReportConverter
 
         public Dictionary<string, string> GetResultSetParameters(int ResultSetId)
         {
+
             var quiry = from para in _db.ResultParameter
                         where para.ResultSetId == ResultSetId
-                        select new { Name = para.Name, Value = para.Value };
+                       select new { Name = para.Name, Value = para.Value };
 
             var results = quiry.ToList();
+            
+            if (results.Count == 0)
+            {
+                quiry = from para in _db.ResultParameter
+                        join rs in _db.ResultSet on ResultSetId equals rs.Id
+                        where para.GroupName == rs.Name
+                        select new { Name = para.Name, Value = para.Value };
+
+                results = quiry.ToList();
+            }
+
 
             var outDict = new Dictionary<string, string>();
             foreach (var res in results)
@@ -223,7 +236,9 @@ namespace NRTDP.ReportConverter
 
             foreach (var mod in splitArray)
             {
-                string modSet = mod.Split(':')[0];
+                if (mod != "")
+                {
+  string modSet = mod.Split(':')[0];
                 string modString = mod.Split(':')[1];
 
                 int modId = Convert.ToInt32(modString.Split('@')[0]);
@@ -231,6 +246,8 @@ namespace NRTDP.ReportConverter
                 var modtoadd = ModLookup(modId,modSet,modLoc,chemId);
 
                 outModList.Add(modtoadd);
+                }
+              
 
             }
             return outModList;
