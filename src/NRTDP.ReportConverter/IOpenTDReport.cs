@@ -5,15 +5,15 @@ namespace NRTDP.ReportConverter
 {
     public interface IOpenTDReport
     {
-        List<DBSequence> GetDBSequences(double FDR);
+        List<DBSequence> GetDBSequences(double FDR, int? dataSetId = null);
         Dictionary<string, double> GetMassTable();
         Dictionary<int, string> GetResultSets();
 
         Dictionary<string, string> GetResultSetParameters(int ResultSetId);
         Dictionary<string, Dictionary<string, string>> GetParameters();
         Dictionary<int, Tuple<string, string>> GetDataFiles();
-        IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR);
-        IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR);
+        IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR, int? dataSetId = null);
+        IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR, int? dataSetId = null);
         BioMod ModLookup(int? modId, string? ModificationSetId, int startIndex, int chemId);
         public List<BioMod> ParseModHash(string ModHash, int chemId);
 

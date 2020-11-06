@@ -47,11 +47,40 @@ namespace NRTDP.ReportConverter
         }
        
 
-        public List<DBSequence> GetDBSequences(double FDR)
+        public List<DBSequence> GetDBSequences(double FDR, int? dataSetId = null)
         {
 
+            if (dataSetId.HasValue)
+            {
+                var entry_quiry = from I in _db.Isoform
+                                  join e in _db.Entry on I.EntryId equals e.Id
+                                  join bio in _db.BiologicalProteoform on I.Id equals bio.IsoformId
+                                  join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
 
-            var entry_quiry = from I in _db.Isoform
+                                  join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 2 } equals new { ID = q2.HitId, agg = q2.AggregationLevel }
+                                  join t in _db.Taxon on e.TaxonId equals t.Id into taxon
+                                  from t in taxon.DefaultIfEmpty()
+                                  where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
+
+                                  select new DBSequence
+                                  {
+                                      ID = I.Id,
+                                      Accession = I.AccessionNumber,
+                                      Sequence = I.Sequence,
+                                      UniProtID = e.UniProtId,
+                                      TaxonID = e.TaxonId,
+                                      SciName = t.ScientificName ?? "UnIdenitified",
+                                      Description = e.Description
+                                  };
+
+
+
+                return entry_quiry.ToList();
+            }
+            else
+            {
+     var entry_quiry = from I in _db.Isoform
                               join e in _db.Entry on I.EntryId equals e.Id
                               join bio in _db.BiologicalProteoform on I.Id equals bio.IsoformId
                               join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
@@ -68,6 +97,8 @@ namespace NRTDP.ReportConverter
 
 
             return entry_quiry.ToList();
+            }
+       
 
 
         }
@@ -164,9 +195,31 @@ outDict[res.groupName][res.Name] = res.Value;
         }
 
 
-        public IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR)
+        public IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR, int? dataSetId = null)
         {
-            var entry_quiry = from h in _db.Hit
+            if (dataSetId.HasValue)
+            {
+                var entry_quiry = from h in _db.Hit
+                                  join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                                  join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
+                                  join I in _db.Isoform on bio.IsoformId equals I.Id
+
+
+                                  join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                                  where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
+                                  group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by bio.Id into group1
+
+                                  select new BiologicalProetoform { ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+                                    ;
+
+                var output = entry_quiry.ToList();
+
+                return output;
+            }
+            else
+            {
+          var entry_quiry = from h in _db.Hit
                               join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                               join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
                               join I in _db.Isoform on  bio.IsoformId equals I.Id 
@@ -183,11 +236,35 @@ outDict[res.groupName][res.Name] = res.Value;
             var output =  entry_quiry.ToList();
 
             return output;
+            }
+  
 
         }
-        public IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR)
+        public IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR, int? dataSetId = null)
         {
-            var entry_quiry = from h in _db.Hit
+            if (dataSetId.HasValue)
+            {
+                var entry_quiry = from h in _db.Hit
+                                  join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                                  join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
+                                  join I in _db.Isoform on bio.IsoformId equals I.Id
+
+
+                                  join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                                  where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
+                                  group new { ChemId = c.Id, IsoSequence = I.Sequence, BioId = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by c.Id into group1
+
+                                  select new ChemicalProetoform { BioId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+                                      ;
+
+                var output = entry_quiry.ToList();
+
+                return output;
+            }
+            else
+            {
+        var entry_quiry = from h in _db.Hit
                               join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                               join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
                               join I in _db.Isoform on bio.IsoformId equals I.Id
@@ -204,6 +281,8 @@ outDict[res.groupName][res.Name] = res.Value;
             var output = entry_quiry.ToList();
 
             return output;
+            }
+    
 
         }
 
