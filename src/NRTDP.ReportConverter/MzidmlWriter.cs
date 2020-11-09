@@ -3,6 +3,7 @@ using SQLitePCL;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
@@ -23,17 +24,78 @@ namespace NRTDP.ReportConverter
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
+     
+
+
+        public static void ConvertToSeperateCompressedMzId(string TDReport, string outputFolder, double FDR = 0.05)
+        {
+            string tempFilePath = Path.GetTempFileName();
+
+            var inputFileInfo = new FileInfo(TDReport);
+
+            var _db = TDReportVersionCheck(inputFileInfo.FullName);
+
+            var datasets = _db.GetDataFiles();
+
+            foreach (var dataset in datasets)
+            {
+                var rawFileName = dataset.Value.Item1;
+
+                var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid");
+
+                // Write the opening and short xml with a single stream 
+                using (FileStream stream = File.Create(tempFilePath))
+                using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
+                {
+                    writer.WriteStartDoc();
+                    writer.WriteMzIDStartElement(inputFileInfo.Name);
+                    writer.WriteMzIDCVList();
+                    writer.WriteAnalysisSoftwareList();
+                    writer.WriteProviderAndAuditCollection();
+                    writer.WriteSequenceCollection(_db, FDR, dataset.Key);
+                    writer.WriteAnalysisCollection(_db, dataset.Key);
+                    writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
+                }
+             
+
+                using (FileStream sourcefs = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read))
+                using (FileStream fs = new FileStream(outputPath, FileMode.Create))
+                
+                {
+                    byte[] bytes = new byte[sourcefs.Length];
+                    int numBytesToRead = (int)sourcefs.Length;
+                    int numBytesRead = 0;
+                    while (numBytesToRead > 0)
+                    {
+                        // Read may return anything from 0 to numBytesToRead.
+                        int n = sourcefs.Read(bytes, numBytesRead, numBytesToRead);
+
+                        // Break when the end of the file is reached.
+                        if (n == 0)
+                            break;
+
+                        numBytesRead += n;
+                        numBytesToRead -= n;
+                    }
+                    numBytesToRead = bytes.Length;
+
+
+                    using (var compressionStream = new GZipStream(fs,
+            CompressionMode.Compress))
+                    {
+                        compressionStream.Write(bytes, 0, bytes.Length);
+                        compressionStream.Flush();
+                    }
+                }
+                File.Delete(tempFilePath);
+            }
+        }
+
         public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
-
-
             var _db =  TDReportVersionCheck(inputFileInfo.FullName);
 
-            //ToDo: Reader Type Selection 
-            //_db = new OpenTDReport_31(inputFileInfo.FullName);
-
-            // Write the opening and short xml with a single stream 
             using (FileStream stream = File.Create(outputPath))
             using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
             {
@@ -52,11 +114,7 @@ namespace NRTDP.ReportConverter
         {
             var inputFileInfo = new FileInfo(TDReport);
 
-
-            //ToDo: Reader Type Selection 
             var _db = TDReportVersionCheck(inputFileInfo.FullName);
-
-            //var _db = new OpenTDReport_4(inputFileInfo.FullName);
 
             var datasets = _db.GetDataFiles();
 
@@ -66,7 +124,6 @@ namespace NRTDP.ReportConverter
 
                 var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid");
                 
-                // Write the opening and short xml with a single stream 
             using (FileStream stream = File.Create(outputPath))
             using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
             {
@@ -80,44 +137,6 @@ namespace NRTDP.ReportConverter
                 writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
             }
             }
-        }
-
-        public static void ConvertToMzId(string TDReport, string outputPath,string version, double FDR = 0.05)
-        {
-            var inputFileInfo = new FileInfo(TDReport);
-
-            IOpenTDReport _db = null;
-            //ToDo: Reader Type Selection 
-
-            if (version == "3.1")
-            {
-_db = new OpenTDReport_31(inputFileInfo.FullName);
-            }
-            else if (version == "4")
-            {
-                _db = new OpenTDReport_4(inputFileInfo.FullName);
-            }
-            
-
-            // Write the opening and short xml with a single stream 
-            using (FileStream stream = File.Create(outputPath))
-            using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
-            {
-
-
-                writer.WriteStartDoc();
-                writer.WriteMzIDStartElement(inputFileInfo.Name);
-                writer.WriteMzIDCVList();
-                writer.WriteAnalysisSoftwareList();
-                writer.WriteProviderAndAuditCollection();
-                writer.WriteSequenceCollection(_db, FDR);
-                writer.WriteAnalysisCollection(_db);
-                writer.WriteDataCollection(_db, inputFileInfo, FDR);
-            }
-
-
-
-
         }
 
         public void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR, int? dataSetId = null)
@@ -682,7 +701,7 @@ this.WriteEndElement();
 
                 this.WriteStartElement("ProteinDetection");
                 this.WriteAttributeString("id", $"PD_{ResultSet.Key}");
-                this.WriteAttributeString("proteinDetectionProtocol_ref", $"PDP_{ResultSet.Value}");
+                this.WriteAttributeString("proteinDetectionProtocol_ref", $"PDP_{ResultSet.Key}");
                 this.WriteAttributeString("proteinDetectionList_ref", $"PDL_{ResultSet.Key}");
                 //this.WriteAttributeString("activityDate", $"{DateTime.Now}");
 
@@ -708,8 +727,8 @@ this.WriteEndElement();
             foreach (var ResultSet in resultSets)
             {
                 this.WriteStartElement("SpectrumIdentificationProtocol");
-                this.WriteAttributeString("id", $"SI_{ResultSet.Key}");
-                this.WriteAttributeString("name", $"SI_{ResultSet.Value}");
+                this.WriteAttributeString("id", $"SIP_{ResultSet.Key}");
+                this.WriteAttributeString("name", $"{ResultSet.Value}");
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("SearchType");
                 this.WriteCVParam("MS:1001083", "ms-ms search");
@@ -801,7 +820,9 @@ this.WriteStartElement("FragmentTolerance");
                 this.WriteEndElement();
 
 this.WriteStartElement("Threshold");
-                this.WriteCVParam("MS:1001448", "pep:FDR threshold"); //do we need a proteoform level FDR CV?
+                this.WriteCVParam("MS:100XXXX", "Isoform:FDR threshold");
+                this.WriteCVParam("MS:100XXXX", "Hit:FDR threshold");
+                this.WriteCVParam("MS:1001448", "pep:FDR threshold");//do we need a proteoform level FDR CV?
                 this.WriteEndElement();
 this.WriteEndElement();
                   
@@ -813,7 +834,7 @@ this.WriteEndElement();
             foreach (var ResultSet in resultSets)
             {
                 this.WriteStartElement("ProteinDetectionProtocol");
-                this.WriteAttributeString("id", $"PDP_{ResultSet.Value}");
+                this.WriteAttributeString("id", $"PDP_{ResultSet.Key}");
           
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("AnalysisParams");
@@ -839,9 +860,6 @@ foreach (var par in parameters["Generate SAS Input"])
 
                 }
                 }
-                    
-
-
 
                 this.WriteEndElement();
              this.WriteStartElement("Threshold");
@@ -941,8 +959,8 @@ foreach (var par in parameters["Generate SAS Input"])
 
                 this.WriteStartElement("PeptideEvidence");
                 this.WriteAttributeString("id", $"PE_Chem_{bioPForm.ChemId}_ISO_{bioPForm.DBSequenceID}");
-                this.WriteAttributeString("dBSequence_ref", $"{bioPForm.DBSequenceID}");
-                this.WriteAttributeString("peptide_ref", $"{bioPForm.ID}");
+                this.WriteAttributeString("dBSequence_ref", $"ISO_{bioPForm.DBSequenceID}");
+                this.WriteAttributeString("peptide_ref", $"Chem_{bioPForm.ID}");
                 this.WriteAttributeString("start", $"{bioPForm.StartIndex}");
                 this.WriteAttributeString("end", $"{bioPForm.EndIndex}");
                 this.WriteAttributeString("pre", $"{pre}");

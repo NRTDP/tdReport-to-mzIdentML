@@ -6,7 +6,7 @@ namespace NRTDP.ReportConverter
     {
         static void Main(string[] args)
         {
-            MzidmlWriter.ConvertToSeperateMzId(@"\\resfiles.northwestern.edu\krgData\User Data\Hollas.Mike\Updated parameters\Yeast\yeast_new_parameters.tdReport", @"C:\Data\Golden\TDReports\",0.05);
+            MzidmlWriter.ConvertToSeperateCompressedMzId(@"C:\Data\Golden\TDReports\Yeast.tdReport", @"C:\Data\Golden\TDReports\comp", 0.05);
         }
     }
 }

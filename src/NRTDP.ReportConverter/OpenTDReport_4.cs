@@ -149,7 +149,7 @@ namespace NRTDP.ReportConverter
         public Dictionary<string, Dictionary<string, string>> GetParameters()
         {
             var quiry = from para in _db.ResultParameter
-                        where para.GroupName != null
+                        where para.GroupName != null && para.ResultSetId == null
                         select new { groupName = para.GroupName, Name = para.Name, Value = para.Value };
 
             var results = quiry.ToList();
@@ -325,7 +325,9 @@ namespace NRTDP.ReportConverter
 
 
 
-        public Dictionary<int, Dictionary<string, IList<FragmentIon>>> GetFragmentsforHit(int hitId)
+
+
+            public Dictionary<int, Dictionary<string, IList<FragmentIon>>> GetFragmentsforHit(int hitId)
         {
             var frag_query = from h in _db.Hit
                              join f in _db.MatchingIon on h.Id equals f.HitId
@@ -358,7 +360,7 @@ namespace NRTDP.ReportConverter
 
         public Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>> CreateBatchOfHitsWithIons(int ResultSetId, int dataFileId, double FDR = 0.05)
         {
-            //TODO Change from 2020 etc!!! this is not uniform!
+       
             //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
             var hit_quiry = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
@@ -376,7 +378,7 @@ namespace NRTDP.ReportConverter
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
 
 
-                            where SH.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                            where SH.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && SH.Level == 2
                             select new { gqvalue = q1.GlobalQvalue, pscore = ps.Value, escore = es.Value, cscore = cs.Value, Cleavages = pcs.Value, ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
 
                              ;
