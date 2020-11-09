@@ -41,7 +41,7 @@ namespace NRTDP.ReportConverter
             {
                 var rawFileName = dataset.Value.Item1;
 
-                var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid");
+                var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid.zip");
 
                 // Write the opening and short xml with a single stream 
                 using (FileStream stream = File.Create(tempFilePath))
