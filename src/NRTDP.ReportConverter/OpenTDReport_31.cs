@@ -490,6 +490,7 @@ outDict[res.groupName][res.Name] = res.Value;
         public HashSet<int> BioId { get; set; }
         public int IsoformId { get; set; }
         public double GlobalQvalue { get; set; }
+       
 
     }
     public class SpectrumIdentificationItem_Hit
@@ -509,6 +510,7 @@ outDict[res.groupName][res.Name] = res.Value;
         public double CScore { get; set; }
         public double Cleavages { get; set; }
         public double GlobalQValue { get; set; }
+        public double ChemQvalue { get; set; }
 
 
 
@@ -571,6 +573,7 @@ public class FragmentIon
 
         public int EndIndex { get; set; }
         public string IsoformSeqence { get; set; }
+        public double ProteoformQValue { get; set; }
 
 
 

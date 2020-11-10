@@ -13,20 +13,18 @@ using ThermoFisher.BioPharma.Data.Entities;
 namespace NRTDP.ReportConverter
 {
 
-    //TODO!! Change to output one Mzid for eacdh raw file
-    // output peak list file too
+
+    // output peak list file too???
     public sealed class MzidmlWriter : IDisposable
     {
         private XmlWriter _writer;
-        private FileInfo _TDReport;
+       
 
         public MzidmlWriter(Stream stream, Encoding encoding)
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
      
-
-
         public static void ConvertToSeperateCompressedMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             string tempFilePath = Path.GetTempFileName();
@@ -89,6 +87,7 @@ namespace NRTDP.ReportConverter
                 }
                 File.Delete(tempFilePath);
             }
+            _db.Dispose();
         }
 
         public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
@@ -105,9 +104,10 @@ namespace NRTDP.ReportConverter
                 writer.WriteAnalysisSoftwareList();
                 writer.WriteProviderAndAuditCollection();
                 writer.WriteSequenceCollection(_db, FDR);
-                writer.WriteAnalysisCollection(_db);
+                writer.WriteAnalysisCollection(_db,FDR);
                 writer.WriteDataCollection(_db, inputFileInfo, FDR);
             }
+            _db.Dispose();
         }
 
         public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05)
@@ -133,10 +133,11 @@ namespace NRTDP.ReportConverter
                 writer.WriteAnalysisSoftwareList();
                 writer.WriteProviderAndAuditCollection();
                 writer.WriteSequenceCollection(_db, FDR, dataset.Key);
-                writer.WriteAnalysisCollection(_db, dataset.Key);
+                writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
                 writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
             }
             }
+            _db.Dispose();
         }
 
         public void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR, int? dataSetId = null)
@@ -298,20 +299,17 @@ var dataFiles = db.GetDataFiles();
 
                                 this.WriteEndElement();//end fragmenation
 
-                                //Make CV for these?
-                                this.WriteUserParam("Kelleher P-score", String.Format("{0:g4}", hit.Value.PScore));
-                                this.WriteUserParam("Kelleher E-value", String.Format("{0:g2}", hit.Value.EValue));
-                                this.WriteUserParam("Kelleher C-score", String.Format("{0:g4}", hit.Value.CScore));
-                                this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages));
-                                this.WriteUserParam("Hit Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
+                            //Make CV for these?
+                            this.WriteCVParam("MS:1003126", "ProSight:spectral P-score", String.Format("{0:g4}", hit.Value.PScore));
+                            this.WriteCVParam("MS:1003127", "ProSight:spectral E-value", String.Format("{0:g2}", hit.Value.EValue));
+                            this.WriteCVParam("MS:1003128", "ProSight:spectral C-score", String.Format("{0:g4}", hit.Value.CScore));
+                            this.WriteCVParam("MS:1003125", "ProSight:spectral Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
 
+                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages)); // is there a CV for this?
+
+                            
                                 this.WriteEndElement();
                             }
-
-                            //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
-
-
-                            //List of all SpectrumIdentificationItems - Hits!
 
                             this.WriteEndElement();
                         }
@@ -353,8 +351,8 @@ var dataFiles = db.GetDataFiles();
                                 this.WriteEndElement();
 
                             }
-
-                            //this.WriteUserParam("Isoform Q-value", $"{chem.Value.GlobalQvalue}");
+                        this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
+                           
 
                             this.WriteEndElement();
                             this.WriteEndElement();
@@ -455,14 +453,16 @@ var dataFiles = db.GetDataFiles();
 
                         this.WriteEndElement();//end fragmenation
 
-                            //Make CV for these?
-                            this.WriteUserParam("Kelleher P-score", String.Format("{0:g4}", hit.Value.PScore));
-                            this.WriteUserParam("Kelleher E-value", String.Format("{0:g2}", hit.Value.EValue));
-                            this.WriteUserParam("Kelleher C-score", String.Format("{0:g4}", hit.Value.CScore));
-                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages));
-                            this.WriteUserParam("Hit Q-value", String.Format("{0:e4}",hit.Value.GlobalQValue));
+                                //Make CV for these?
+                                this.WriteCVParam("MS:1003126", "ProSight:spectral P-score", String.Format("{0:g4}", hit.Value.PScore));
+                                this.WriteCVParam("MS:1003127", "ProSight:spectral E-value", String.Format("{0:g2}", hit.Value.EValue));
+                                this.WriteCVParam("MS:1003128", "ProSight:spectral C-score", String.Format("{0:g4}", hit.Value.CScore));
+                                this.WriteCVParam("MS:1003125", "ProSight:spectral Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
 
-                            this.WriteEndElement();
+                                this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages)); // is there a CV for this?
+
+
+                                this.WriteEndElement();
                     }
 
                     //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
@@ -514,10 +514,10 @@ var dataFiles = db.GetDataFiles();
                             this.WriteEndElement();
                             
                         }
+                            this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
 
-                       //this.WriteUserParam("Isoform Q-value", $"{chem.Value.GlobalQvalue}");
 
-                        this.WriteEndElement();
+                            this.WriteEndElement();
                         this.WriteEndElement();
                     }
                 }
@@ -638,7 +638,10 @@ var dataFiles = db.GetDataFiles();
             this.WriteEndElement(); //end contact role
 
             this.WriteStartElement("SoftwareName");
-            this.WriteCVParam("MS:100XXXX", "TDPortal"); //get Accession#
+
+            this.WriteCVParam("MS:1003142", "TDPortal");
+            //this.WriteCVParam("MS:1003141", "ProSight"); //get Accession#
+
             this.WriteEndElement(); //end SoftwareName
 
             //TODO: Add Customizations? its optional Free text 
@@ -648,7 +651,7 @@ var dataFiles = db.GetDataFiles();
             this.WriteEndElement(); //end AnalysisSoftwareList
         }
 
-        public void WriteAnalysisCollection(IOpenTDReport db,int? dataFileId = null)
+        public void WriteAnalysisCollection(IOpenTDReport db,double FDR, int? dataFileId = null)
         {
 
        
@@ -731,17 +734,44 @@ this.WriteEndElement();
                 this.WriteAttributeString("name", $"{ResultSet.Value}");
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("SearchType");
+
+         
+            
                 this.WriteCVParam("MS:1001083", "ms-ms search");
+                
+
+             
                 this.WriteEndElement();
 
                 this.WriteStartElement("AdditionalSearchParams"); //What to put here!? do UserPArams for now
                 var ResultSetParameters = db.GetResultSetParameters(ResultSet.Key);
-              
 
-
-                foreach (var parameter in ResultSetParameters)
+                // to do - CV params for - Annotated Proteoform Search mode, Subsequence Search mode,Run delta m mode
+                if (ResultSet.Value == "BioMarker")
                 {
-                    if (parameter.Key != "fragment_tolerance" && parameter.Key != "precursor_window_tolerance")
+                    this.WriteCVParam("MS:1003139", "ProSight:Run Subsequence Search mode", "True");
+                }
+                else if (ResultSet.Value == "Tight Absolute Mass")
+                {
+                    this.WriteCVParam("MS:1003140", "ProSight:Run Annotated Proteoform Search mode", "True");
+                }
+                if (ResultSetParameters.ContainsKey("delta_m"))
+                { 
+                if (ResultSetParameters["delta_m"] == "True")
+                    {
+                        this.WriteCVParam("MS:1003138", "ProSight:Run delta m mode", "True");
+                    }
+                    else
+                    {
+                        this.WriteCVParam("MS:1003138", "ProSight:Run delta m mode", "False");
+                    }
+                }
+
+
+
+                    foreach (var parameter in ResultSetParameters)
+                {
+                    if (parameter.Key != "fragment_tolerance" && parameter.Key != "precursor_window_tolerance" && parameter.Key != "delta_m")
                         this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}",parameter.Value);
                 }
                 foreach (var parameterGroup in parameters)
@@ -819,10 +849,15 @@ this.WriteStartElement("FragmentTolerance");
 
                 this.WriteEndElement();
 
+
+
+
+
 this.WriteStartElement("Threshold");
-                this.WriteCVParam("MS:100XXXX", "Isoform:FDR threshold");
-                this.WriteCVParam("MS:100XXXX", "Hit:FDR threshold");
-                this.WriteCVParam("MS:1001448", "pep:FDR threshold");//do we need a proteoform level FDR CV?
+
+                this.WriteCVParam("MS:1002260", "PSM:FDR threshold", $"{FDR}");
+                this.WriteCVParam("MS:1002910", "proteoform-level global FDR threshold", $"{FDR}");
+                this.WriteCVParam("MS:1001448", "pep:FDR threshold", $"{FDR}");//do we need a proteoform level FDR CV?
                 this.WriteEndElement();
 this.WriteEndElement();
                   
@@ -863,7 +898,7 @@ foreach (var par in parameters["Generate SAS Input"])
 
                 this.WriteEndElement();
              this.WriteStartElement("Threshold");
-                this.WriteCVParam("MS:1001447", "prot:FDR threshold"); //do we need a proteoform level FDR CV?
+                this.WriteCVParam("MS:1001447", "prot:FDR threshold", $"{FDR}"); //do we need a proteoform level FDR CV?
                 this.WriteEndElement();
                 this.WriteEndElement();  
                 
@@ -966,6 +1001,8 @@ foreach (var par in parameters["Generate SAS Input"])
                 this.WriteAttributeString("pre", $"{pre}");
                 this.WriteAttributeString("post", $"{post}");
                 this.WriteAttributeString("isDecoy", $"false");
+
+                this.WriteCVParam("MS:1003130", "ProSight:proteoform Q-value", String.Format("{0:e4}", bioPForm.ProteoformQValue));
                 this.WriteEndElement();
             }
 

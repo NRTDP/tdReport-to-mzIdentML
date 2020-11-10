@@ -9,7 +9,7 @@ namespace NRTDP.ReportConverter
         {
             var sw = new Stopwatch();
             sw.Start();
-            MzidmlWriter.ConvertToSeperateCompressedMzId(@"C:\Data\Golden\TDReports\Natural Killer\2018_Allen_-_AllData_APA_DS_07_Search_2W_NK_C_josephgreer_2020-10-14-01-12-27_12902_codeset_4_0_0.tdReport", @"C:\Data\Golden\TDReports\Natural Killer", 0.05);
+            MzidmlWriter.ConvertToSeperateMzId(@"C:\Data\Golden\TDReports\golden_new_parameters.tdReport", @"C:\Data\Golden\TDReports", 0.05);
             Console.WriteLine(sw.Elapsed);
         }
     }
