@@ -32,9 +32,7 @@ namespace NRTDP.ReportConverter
                                   join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                                   join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel } //change to isoform and external id
                                   where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
-
-                                  select new DBSequence
-                                  {
+                                  group new {
                                       ID = I.Id,
                                       Accession = I.AccessionNumber,
                                       Sequence = I.Sequence,
@@ -42,6 +40,19 @@ namespace NRTDP.ReportConverter
                                       TaxonID = e.TaxonId,
                                       SciName = "UnIdenitified", //Implement a lookup?
                                       Description = e.Description
+                                  } by I.Id into group1
+
+
+
+                                  select new DBSequence
+                                  {
+                                      ID = group1.Key,
+                                      Accession = group1.Max(x=>x.Accession),
+                                      Sequence = group1.Max(x => x.Sequence),
+                                      UniProtID = group1.Max(x => x.UniProtID),
+                                      TaxonID = group1.Max(x => x.TaxonID),
+                                      SciName = "UnIdenitified", //Implement a lookup?
+                                      Description = group1.Max(x => x.Description)
                                   };
                 var output = entry_quiry.ToList();
                 return output;
@@ -55,17 +66,27 @@ namespace NRTDP.ReportConverter
                               join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                               join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
                               where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                     group new
+                     {
+                         ID = I.Id,
+                         Accession = I.AccessionNumber,
+                         Sequence = I.Sequence,
+                         UniProtID = e.UniProtId,
+                         TaxonID = e.TaxonId,
+                         SciName = "UnIdenitified", //Implement a lookup?
+                         Description = e.Description
+                     } by I.Id into group1
 
-                              select new DBSequence
-                              {
-                                  ID = I.Id,
-                                  Accession = I.AccessionNumber,
-                                  Sequence = I.Sequence,
-                                  UniProtID = e.UniProtId,
-                                  TaxonID = e.TaxonId,
-                                  SciName = "UnIdenitified", //Implement a lookup?
-                                  Description = e.Description
-                              };
+                     select new DBSequence
+                     {
+                         ID = group1.Key,
+                         Accession = group1.Max(x => x.Accession),
+                         Sequence = group1.Max(x => x.Sequence),
+                         UniProtID = group1.Max(x => x.UniProtID),
+                         TaxonID = group1.Max(x => x.TaxonID),
+                         SciName = "UnIdenitified", //Implement a lookup?
+                         Description = group1.Max(x => x.Description)
+                     };
                 var output = entry_quiry.ToList();
                 return output;
             }

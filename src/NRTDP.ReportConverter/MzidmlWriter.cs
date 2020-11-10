@@ -767,8 +767,6 @@ this.WriteEndElement();
                     }
                 }
 
-
-
                     foreach (var parameter in ResultSetParameters)
                 {
                     if (parameter.Key != "fragment_tolerance" && parameter.Key != "precursor_window_tolerance" && parameter.Key != "delta_m")
