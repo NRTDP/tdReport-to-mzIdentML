@@ -993,7 +993,7 @@ foreach (var par in parameters["Generate SAS Input"])
                 this.WriteStartElement("PeptideEvidence");
                 this.WriteAttributeString("id", $"PE_Chem_{bioPForm.ChemId}_ISO_{bioPForm.DBSequenceID}");
                 this.WriteAttributeString("dBSequence_ref", $"ISO_{bioPForm.DBSequenceID}");
-                this.WriteAttributeString("peptide_ref", $"Chem_{bioPForm.ID}");
+                this.WriteAttributeString("peptide_ref", $"Chem_{bioPForm.ChemId}");
                 this.WriteAttributeString("start", $"{bioPForm.StartIndex}");
                 this.WriteAttributeString("end", $"{bioPForm.EndIndex}");
                 this.WriteAttributeString("pre", $"{pre}");
