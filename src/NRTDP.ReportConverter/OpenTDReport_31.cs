@@ -58,12 +58,12 @@ namespace NRTDP.ReportConverter
                                   join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
 
                                   join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
-                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 2 } equals new { ID = q2.HitId, agg = q2.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
                                   join t in _db.Taxon on e.TaxonId equals t.Id into taxon
                                   from t in taxon.DefaultIfEmpty()
                                   where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
 
-                                  select new DBSequence
+                                  group new
                                   {
                                       ID = I.Id,
                                       Accession = I.AccessionNumber,
@@ -72,7 +72,19 @@ namespace NRTDP.ReportConverter
                                       TaxonID = e.TaxonId,
                                       SciName = t.ScientificName ?? "UnIdenitified",
                                       Description = e.Description
+                                  } by I.Id into group1
+
+                                  select new DBSequence
+                                  {
+                                      ID = group1.Key,
+                                      Accession = group1.Max(x => x.Accession),
+                                      Sequence = group1.Max(x => x.Sequence),
+                                      UniProtID = group1.Max(x => x.UniProtID),
+                                      TaxonID = group1.Max(x => x.TaxonID),
+                                      SciName = group1.Max(x=>x.SciName),
+                                      Description = group1.Max(x => x.Description)
                                   };
+
 
 
 
@@ -80,23 +92,41 @@ namespace NRTDP.ReportConverter
             }
             else
             {
-     var entry_quiry = from I in _db.Isoform
-                              join e in _db.Entry on I.EntryId equals e.Id
-                              join bio in _db.BiologicalProteoform on I.Id equals bio.IsoformId
-                              join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
-                              
-                              join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
-                              join q2 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 2 } equals new { ID = q2.HitId, agg = q2.AggregationLevel }
-                             join t in _db.Taxon on e.TaxonId equals t.Id into taxon
-                              from t in taxon.DefaultIfEmpty()
-                              where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                               
-                              select new DBSequence{ ID = I.Id, Accession = I.AccessionNumber, Sequence= I.Sequence, UniProtID = e.UniProtId,
-                              TaxonID = e.TaxonId, SciName = t.ScientificName ?? "UnIdenitified", Description = e.Description};
+                var entry_quiry = from I in _db.Isoform
+                                  join e in _db.Entry on I.EntryId equals e.Id
+                                  join bio in _db.BiologicalProteoform on I.Id equals bio.IsoformId
+                                  join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
+
+                                  join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                                  join t in _db.Taxon on e.TaxonId equals t.Id into taxon
+                                  from t in taxon.DefaultIfEmpty()
+                                  where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+
+                                  group new
+                                  {
+                                      ID = I.Id,
+                                      Accession = I.AccessionNumber,
+                                      Sequence = I.Sequence,
+                                      UniProtID = e.UniProtId,
+                                      TaxonID = e.TaxonId,
+                                      SciName = t.ScientificName ?? "UnIdenitified",
+                                      Description = e.Description
+                                  } by I.Id into group1
+
+                                  select new DBSequence
+                                  {
+                                      ID = group1.Key,
+                                      Accession = group1.Max(x => x.Accession),
+                                      Sequence = group1.Max(x => x.Sequence),
+                                      UniProtID = group1.Max(x => x.UniProtID),
+                                      TaxonID = group1.Max(x => x.TaxonID),
+                                      SciName = group1.Max(x => x.SciName),
+                                      Description = group1.Max(x => x.Description)
+                                  };
 
 
-
-            return entry_quiry.ToList();
+                return entry_quiry.ToList();
             }
        
 
@@ -207,11 +237,14 @@ outDict[res.groupName][res.Name] = res.Value;
 
                                   join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                                   join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                                  join q3 in _db.GlobalQualitativeConfidence on new { ID = bio.Id, agg = 1 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
                                   where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
-                                  group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by bio.Id into group1
+                                  group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex, QValue = q3.GlobalQvalue } by bio.Id into group1
 
-                                  select new BiologicalProetoform { ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
-                                    ;
+                                  select new BiologicalProetoform { ProteoformQValue = group1.Max(x => x.QValue), ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+
+
+                                     ;
 
                 var output = entry_quiry.ToList();
 
@@ -219,21 +252,23 @@ outDict[res.groupName][res.Name] = res.Value;
             }
             else
             {
-          var entry_quiry = from h in _db.Hit
-                              join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
-                              join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
-                              join I in _db.Isoform on  bio.IsoformId equals I.Id 
-                             
+                var entry_quiry = from h in _db.Hit
+                                  join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
+                                  join bio in _db.BiologicalProteoform on c.Id equals bio.ChemicalProteoformId
+                                  join I in _db.Isoform on bio.IsoformId equals I.Id
 
-                              join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
-                              join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
-                          where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
- group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id,Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId,StartIndex = bio.StartIndex, EndIndex = bio.EndIndex } by bio.Id into group1
-                            
-                               select new  BiologicalProetoform {ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence) ,ID = group1.Key, Sequence = group1.Max(x=>x.Sequence),ModificationHash = group1.Max(x=>x.ModificationHash), DBSequenceID = group1.Max(x=>x.DBSequenceID), CterminalModID = group1.Max(x=>x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
-                              ;
 
-            var output =  entry_quiry.ToList();
+                                  join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                                  join q3 in _db.GlobalQualitativeConfidence on new { ID = bio.Id, agg = 1 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
+                                  where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
+                                  group new { ChemId = c.Id, IsoSequence = I.Sequence, ID = bio.Id, Sequence = c.Sequence, ModificationHash = c.ModificationHash, DBSequenceID = bio.IsoformId, CterminalModID = c.CTerminalModificationId, CterminalModSetID = c.CTerminalModificationSetId, NterminalModID = c.NTerminalModificationId, NterminalModSetID = c.NTerminalModificationSetId, StartIndex = bio.StartIndex, EndIndex = bio.EndIndex, QValue = q3.GlobalQvalue } by bio.Id into group1
+
+                                  select new BiologicalProetoform { ProteoformQValue = group1.Max(x => x.QValue), ChemId = group1.Max(x => x.ChemId), IsoformSeqence = group1.Max(x => x.IsoSequence), ID = group1.Key, Sequence = group1.Max(x => x.Sequence), ModificationHash = group1.Max(x => x.ModificationHash), DBSequenceID = group1.Max(x => x.DBSequenceID), CterminalModID = group1.Max(x => x.CterminalModID), CterminalModSetID = group1.Max(x => x.CterminalModSetID), NterminalModID = group1.Max(x => x.NterminalModID), NterminalModSetID = group1.Max(x => x.NterminalModSetID), StartIndex = group1.Max(x => x.StartIndex), EndIndex = group1.Max(x => x.EndIndex) }
+                                      ;
+
+
+                var output =  entry_quiry.ToList();
 
             return output;
             }
@@ -380,11 +415,9 @@ outDict[res.groupName][res.Name] = res.Value;
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                             join hToS in _db.HitToSpectrum on h.Id equals hToS.HitId
                             join sToSH in _db.ScanHeaderToSpectrum on hToS.SpectrumId equals sToSH.SpectrumId
-                            join SH in _db.ScanHeader on sToSH.ScanHeaderId equals SH.Id
+                            join SH in _db.ScanHeader on new { ID = sToSH.ScanHeaderId, DF = dataFileId } equals new { ID = SH.Id, DF = SH.DataFileId }
 
-
-                            //TODO Change from 2020 etc!!! this is not uniform!
-                            join ps in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_pScore"] } equals new {id = ps.HitId, type = ps.ScoreTypeId }
+                            join ps in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_pScore"] } equals new { id = ps.HitId, type = ps.ScoreTypeId }
                             join es in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_eValue"] } equals new { id = es.HitId, type = es.ScoreTypeId }
                             join cs in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_cScore"] } equals new { id = cs.HitId, type = cs.ScoreTypeId }
                             join pcs in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_interResidueCleavages"] } equals new { id = pcs.HitId, type = pcs.ScoreTypeId }
@@ -393,11 +426,11 @@ outDict[res.groupName][res.Name] = res.Value;
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
 
 
-                            where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new {gqvalue=q1.GlobalQvalue, pscore = ps.Value,escore = es.Value, cscore = cs.Value, Cleavages = pcs.Value, ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
+                            where SH.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && SH.Level == 2
+                            select new { gqvalue = q1.GlobalQvalue, pscore = ps.Value, escore = es.Value, cscore = cs.Value, Cleavages = pcs.Value, ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
 
-                             ;
-        
+                              ;
+
 
             var output = hit_quiry.ToList();
 
@@ -433,18 +466,18 @@ outDict[res.groupName][res.Name] = res.Value;
             var hit_quiry = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
-                         
 
-                          
+
+
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
 
 
                             where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id}
+                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id }
 
-                             ;
+                            ;
 
 
             var output = hit_quiry.ToList();
