@@ -1,9 +1,10 @@
 ﻿
 using System;
 using System.Diagnostics;
+using NRTDP.ReportConverter;
 
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.ReportConverter.ConsoleApp
 {
     class Program
     {

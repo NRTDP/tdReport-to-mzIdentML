@@ -7,7 +7,7 @@ namespace NRTDP.TDReport31
     public class ReadTDReport_31 : DbContext
     {
         private string _tDReport;
-        public ReadTDReport_31(string TDReport = "C:\\Data\\Golden\\TDReports\\golden_TDPortal31.tdReport")
+        public ReadTDReport_31(string TDReport)
         {
             _tDReport = TDReport;
 

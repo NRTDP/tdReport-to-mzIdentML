@@ -124,10 +124,6 @@ options.UseSqlite($"Data Source={_tDReport}");
             public string Residues { get; set; }
             public int Terminus { get; set; }
 
-
-          
-
-
         }
 
    
