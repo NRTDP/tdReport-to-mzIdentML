@@ -4,8 +4,11 @@ using System.Linq;
 using NRTDP.TDReport4;
 
 namespace NRTDP.ReportConverter
-{
-    public class OpenTDReport_4 : IDisposable, IOpenTDReport
+{/// <summary>
+/// A class for opening and reading tdReports version 4.0 
+/// This is the main class that pulls queries from the sqlite database - there are differences between 3.0 and 4.0 tdReports which require different classes
+/// </summary>
+    internal class OpenTDReport_4 : IDisposable, IOpenTDReport
     {
         private ReadTDReport_4 _db;
         private string _path;
@@ -13,23 +16,29 @@ namespace NRTDP.ReportConverter
 
         public OpenTDReport_4(string path)
         {
-            //System.Console.WriteLine($"loading: {path}");
             _db = new ReadTDReport_4(path);
             _path = path;
             SetScoreTypeDict();
         }
 
-
+        /// <summary>
+        /// Returns 'DBSequences' AKA isoforms for a rawfile (if specified) that pass an FDR.
+        /// </summary>
+        /// <param name="FDR"></param>
+        /// <param name="dataSetId"></param>
+        /// <returns></returns>
         public List<DBSequence> GetDBSequences(double FDR, int? dataSetId = null)
         {
+            // When one mzidentml per raw file is required
             if (dataSetId.HasValue)
             {
+                //Must pass FDR at isoform and hit level
                 var entry_quiry = from I in _db.Isoform
                                   join e in _db.Entry on I.EntryId equals e.Id
                                   join bio in _db.BiologicalProteoform on I.Id equals bio.IsoformId
                                   join h in _db.Hit on bio.ChemicalProteoformId equals h.ChemicalProteoformId
                                   join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
-                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel } //change to isoform and external id
+                                  join q2 in _db.GlobalQualitativeConfidence on new { ID = I.Id, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel } 
                                   where q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && h.DataFileId == dataSetId
                                   group new {
                                       ID = I.Id,
@@ -42,7 +51,7 @@ namespace NRTDP.ReportConverter
                                   } by I.Id into group1
 
 
-
+                                  //Group by Isoform 
                                   select new DBSequence
                                   {
                                       ID = group1.Key,
@@ -50,7 +59,7 @@ namespace NRTDP.ReportConverter
                                       Sequence = group1.Max(x => x.Sequence),
                                       UniProtID = group1.Max(x => x.UniProtID),
                                       TaxonID = group1.Max(x => x.TaxonID),
-                                      SciName = "UnIdenitified", //Implement a lookup?
+                                      SciName = "UnIdenitified", //Implement a lookup? - this was removed moving from 3.0 -> 4.0
                                       Description = group1.Max(x => x.Description)
                                   };
                 var output = entry_quiry.ToList();
@@ -92,6 +101,9 @@ namespace NRTDP.ReportConverter
 
 
         }
+        /// <summary>
+        /// creates a Dict of score types for lookup
+        /// </summary>
         public void SetScoreTypeDict()
         {
             var entry_quiry = from st in _db.ScoreType
@@ -106,7 +118,7 @@ namespace NRTDP.ReportConverter
 
 
         }
-
+        //Get the mass table used in the searches
         public Dictionary<string, double> GetMassTable()
         {
             var outDict = new Dictionary<string, double>();
@@ -122,7 +134,7 @@ namespace NRTDP.ReportConverter
             }
             return outDict;
         }
-
+        // Create a Dict of result sets (searches) for lookup
         public Dictionary<int, string> GetResultSets()
         {
             var outDict = new Dictionary<int, string>();
@@ -138,7 +150,7 @@ namespace NRTDP.ReportConverter
             }
             return outDict;
         }
-
+        //Get parameters that are specific for a ResultSet (search)
         public Dictionary<string, string> GetResultSetParameters(int ResultSetId)
         {
 
@@ -167,7 +179,7 @@ namespace NRTDP.ReportConverter
             }
             return outDict;
         }
-
+        // Get paraeters that are not specific to a result set (search)
         public Dictionary<string, Dictionary<string, string>> GetParameters()
         {
             var quiry = from para in _db.ResultParameter
@@ -188,14 +200,14 @@ namespace NRTDP.ReportConverter
                 {
                     outDict[res.groupName][res.Name] = res.Value;
                 }
-
-
             }
             return outDict;
-
         }
 
-
+        /// <summary>
+        /// Get a dict of the raw files for lookup
+        /// </summary>
+        /// <returns></returns>
         public Dictionary<int, Tuple<string, string>> GetDataFiles()
         {
             var entry_quiry = from df in _db.DataFile
@@ -212,7 +224,12 @@ namespace NRTDP.ReportConverter
             return outDict;
         }
 
-
+        /// <summary>
+        /// Get Biological proteoforms that pass an FDR (can specifiy a dataset - or leave null to get all)
+        /// </summary>
+        /// <param name="FDR"></param>
+        /// <param name="dataSetId"></param>
+        /// <returns></returns>
         public IEnumerable<BiologicalProetoform> GetBiologicalProteoforms(double FDR, int? dataSetId = null)
         {
             if (dataSetId.HasValue)
@@ -260,6 +277,12 @@ namespace NRTDP.ReportConverter
             }
 
         }
+        /// <summary>
+        /// Get Chemical proteoforms that pass an FDR (can specifiy a dataset - or leave null to get all)
+        /// </summary>
+        /// <param name="FDR"></param>
+        /// <param name="dataSetId"></param>
+        /// <returns></returns>
         public IEnumerable<ChemicalProetoform> GetChemicalProteoforms(double FDR, int? dataSetId = null)
         {
 
@@ -306,7 +329,7 @@ namespace NRTDP.ReportConverter
 
         }
 
-        // I don;t like this! probably best to include this is the get petptides method
+        // I don't like this! probably best to include this is the get petptides method
         public BioMod ModLookup(int? modId, string? ModificationSetId,int startIndex, int chemId)
         {
             var entry_quiry = from m in _db.Modification
@@ -317,7 +340,12 @@ namespace NRTDP.ReportConverter
             return entry_quiry.FirstOrDefault();
 
         }
-
+        /// <summary>
+        /// Takes a ModHash and creates a list of BioMods
+        /// </summary>
+        /// <param name="ModHash"></param>
+        /// <param name="chemId"></param>
+        /// <returns></returns>
         public List<BioMod> ParseModHash(string ModHash, int chemId)
         {
             List<BioMod> outModList = new List<BioMod>();
@@ -350,7 +378,11 @@ namespace NRTDP.ReportConverter
 
 
 
-
+        /// <summary>
+        /// Gets the fragments associated with a hit
+        /// </summary>
+        /// <param name="hitId"></param>
+        /// <returns></returns>
             public Dictionary<int, Dictionary<string, IList<FragmentIon>>> GetFragmentsforHit(int hitId)
         {
             var frag_query = from h in _db.Hit
@@ -381,10 +413,16 @@ namespace NRTDP.ReportConverter
 
             return chargeIonTypeFragDict;
         }
-
+        /// <summary>
+        /// Gets all the hits for a Result set (search) and a dataFile (.raw) that pass an FDR.
+        /// </summary>
+        /// <param name="ResultSetId"></param>
+        /// <param name="dataFileId"></param>
+        /// <param name="FDR"></param>
+        /// <returns></returns>
         public Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>> CreateBatchOfHitsWithIons(int ResultSetId, int dataFileId, double FDR = 0.05)
         {
-       
+            //TODO: Somehow batch this!
             //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
             var hit_quiry = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
@@ -411,7 +449,7 @@ namespace NRTDP.ReportConverter
             var output = hit_quiry.ToList();
 
             var outList = new Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>>();
-
+            //Create Dictonary and group everything
             foreach (var hitscan in output)
             {
                 if (!outList.ContainsKey(hitscan.ScanNo))
@@ -431,11 +469,17 @@ namespace NRTDP.ReportConverter
                     outList[hitscan.ScanNo][hitscan.HitId].BioId.Add(hitscan.BioId);
                 }
             }
-            //Create Dictonary and group everything
+            
             return outList;
         }
 
-
+        /// <summary>
+        /// Gets protein Detection data 
+        /// </summary>
+        /// <param name="ResultSetId"></param>
+        /// <param name="dataFileId"></param>
+        /// <param name="FDR"></param>
+        /// <returns></returns>
         public Dictionary<int, Dictionary<int, ProteinAmbiguityGroup>> GetproteinDetectiondata(int ResultSetId, int dataFileId, double FDR = 0.05)
         {
 
@@ -459,7 +503,7 @@ namespace NRTDP.ReportConverter
             var output = hit_quiry.ToList();
 
             var outList = new Dictionary<int, Dictionary<int, ProteinAmbiguityGroup>>();
-
+            //Create Dictonary and group everything
             foreach (var hitscan in output)
             {
                 if (!outList.ContainsKey(hitscan.IsoformId))
@@ -479,10 +523,12 @@ namespace NRTDP.ReportConverter
                 }
 
             }
-            //Create Dictonary and group everything
+            
             return outList;
         }
-
+        /// <summary>
+        /// Close database link
+        /// </summary>
         public void Dispose()
         {
             ((IDisposable)_db).Dispose();

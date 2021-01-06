@@ -10,8 +10,9 @@ using System.Xml;
 namespace NRTDP.ReportConverter
 {
 
-
-    // output peak list file too???
+    /// <summary>
+    /// 
+    /// </summary>
     public sealed class MzidmlWriter : IDisposable
     {
         private XmlWriter _writer;

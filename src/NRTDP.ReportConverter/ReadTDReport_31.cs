@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NRTDP.TDReport31
 {
-    public class ReadTDReport_31 : DbContext
+    internal class ReadTDReport_31 : DbContext
     {
         private string _tDReport;
         public ReadTDReport_31(string TDReport)

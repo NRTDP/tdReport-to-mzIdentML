@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace NRTDP.ReportConverter
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public interface IOpenTDReport
     {
         List<DBSequence> GetDBSequences(double FDR, int? dataSetId = null);

@@ -5,7 +5,7 @@ using NRTDP.TDReport31;
 
 namespace NRTDP.ReportConverter
 {
-    public class OpenTDReport_31 : IDisposable, IOpenTDReport
+    internal class OpenTDReport_31 : IDisposable, IOpenTDReport
     {
         private ReadTDReport_31 _db;
         private string _path;
