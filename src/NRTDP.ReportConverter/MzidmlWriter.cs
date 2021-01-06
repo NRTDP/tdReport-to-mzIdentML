@@ -1,14 +1,11 @@
 ﻿using Microsoft.Data.Sqlite;
-using SQLitePCL;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Text;
 using System.Xml;
-using ThermoFisher.BioPharma.Data.Entities;
 
 namespace NRTDP.ReportConverter
 {
@@ -34,7 +31,7 @@ namespace NRTDP.ReportConverter
             var _db = TDReportVersionCheck(inputFileInfo.FullName);
 
             var datasets = _db.GetDataFiles();
-
+            double count = 0.0;
             foreach (var dataset in datasets)
             {
                 var rawFileName = dataset.Value.Item1;
@@ -86,6 +83,8 @@ namespace NRTDP.ReportConverter
                     }
                 }
                 File.Delete(tempFilePath);
+                count++;
+                Console.WriteLine(count/datasets.Count());
             }
             _db.Dispose();
         }

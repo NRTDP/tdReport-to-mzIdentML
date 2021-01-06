@@ -5,11 +5,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NRTDP.TDReport4
 {
-    public interface IReadTDReport
-    {
-   
-      
-    }
     public class ReadTDReport_4 : DbContext
     {
         private string _tDReport;

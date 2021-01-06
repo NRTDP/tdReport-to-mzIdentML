@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
 using NRTDP.TDReport4;
 
 namespace NRTDP.ReportConverter

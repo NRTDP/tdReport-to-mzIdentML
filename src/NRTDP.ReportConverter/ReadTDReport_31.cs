@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using NRTDP.TDReport4;
 using System;
 using System.ComponentModel.DataAnnotations;
-
 
 namespace NRTDP.TDReport31
 {

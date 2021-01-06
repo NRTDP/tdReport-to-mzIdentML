@@ -1,17 +1,6 @@
-﻿using DocumentFormat.OpenXml.EMMA;
-using DocumentFormat.OpenXml.Office2013.Excel;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using TopDown;
-using TopDown.HighThroughput;
-using TopDown.Quant;
-using TopDown.Search;
-using TopDown.SpectralProcessing;
-using TopDown.Thermo;
 using NRTDP.TDReport31;
 
 namespace NRTDP.ReportConverter
