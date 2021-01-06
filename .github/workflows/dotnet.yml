@@ -20,5 +20,5 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore - src/NRTDP.ReportConverter.sln
     - name: Build
-      run: dotnet build -configuration Release --no-restore
+      run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
 
