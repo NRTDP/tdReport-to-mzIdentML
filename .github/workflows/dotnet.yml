@@ -18,7 +18,7 @@ jobs:
       with:
         dotnet-version: 5.0.100
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore - src/NRTDP.ReportConverter.sln
     - name: Build
       run: dotnet build -configuration Release --no-restore
 
