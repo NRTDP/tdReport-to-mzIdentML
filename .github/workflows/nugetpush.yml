@@ -24,7 +24,7 @@ jobs:
       uses: brandedoutcast/publish-nuget@v2
       with:
         PROJECT_FILE_PATH: src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj
-        VERSION_REGEX: '^\s*<PackageVersion>(.*)<\/PackageVersion>\s*$'
+        VERSION_STATIC: 1.0.0
         TAG_FORMAT: '*'
         NUGET_KEY: 9A68AB58-8E75-444C-91B7-58BE1EEF4345
         NUGET_SOURCE: http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary  
