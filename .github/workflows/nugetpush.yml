@@ -23,5 +23,9 @@ jobs:
     - name: Create Nuget 
       run: cd src/NRTDP.ReportConverter
        | nuget spec 
+       | nuget pack src/NRTDP.ReportConverter/Package.nuspec
+      
+    - name: Publish to NuGet
+      run: nuget push *.nupkg 9A68AB58-8E75-444C-91B7-58BE1EEF4345 -source http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary
 
      
