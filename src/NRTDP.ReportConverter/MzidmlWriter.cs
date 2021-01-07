@@ -17,12 +17,21 @@ namespace NRTDP.tdReportConverter
     {
         private XmlWriter _writer;
        
-
-        public MzidmlWriter(Stream stream, Encoding encoding)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="encoding"></param>
+        private MzidmlWriter(Stream stream, Encoding encoding)
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
-     
+     /// <summary>
+     /// 
+     /// </summary>
+     /// <param name="TDReport"></param>
+     /// <param name="outputFolder"></param>
+     /// <param name="FDR"></param>
         public static void ConvertToSeperateCompressedMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             string tempFilePath = Path.GetTempFileName();
@@ -114,7 +123,12 @@ namespace NRTDP.tdReportConverter
             }
             _db.Dispose();
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="TDReport"></param>
+        /// <param name="outputFolder"></param>
+        /// <param name="FDR"></param>
         public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
@@ -145,7 +159,7 @@ namespace NRTDP.tdReportConverter
             _db.Dispose();
         }
 
-        public void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR, int? dataSetId = null)
+        private void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR, int? dataSetId = null)
         {
             this.WriteStartElement("DataCollection");
             this.WriteStartElement("Inputs");
@@ -212,7 +226,7 @@ var dataFiles = db.GetDataFiles();
 
             this.WriteEndElement(); //End DataCollection
         }
-        public void WriteAnalysisData(IOpenTDReport db, double FDR, int? dataSetId = null)
+        private void WriteAnalysisData(IOpenTDReport db, double FDR, int? dataSetId = null)
         {
             var rawFiles = db.GetDataFiles();
             var resultSets = db.GetResultSets();
@@ -616,7 +630,7 @@ var dataFiles = db.GetDataFiles();
             this.WriteEndElement();
         }
 
-        public void WriteMzIDStartElement(string name)
+        private void WriteMzIDStartElement(string name)
         {
             this.WriteStartElement("MzIdentML", "http://psi.hupo.org/ms/mzml");
             this.WriteAttributeString("id", name);
@@ -625,7 +639,7 @@ var dataFiles = db.GetDataFiles();
             this.WriteAttributeString("creationDate", $"{DateTime.Now}");
         }
 
-        public void WriteAnalysisSoftwareList()
+        private void WriteAnalysisSoftwareList()
         {
             this.WriteStartElement("AnalysisSoftwareList");
             //toDo differentiate from TDPortal and PC
@@ -656,7 +670,7 @@ var dataFiles = db.GetDataFiles();
             this.WriteEndElement(); //end AnalysisSoftwareList
         }
 
-        public void WriteAnalysisCollection(IOpenTDReport db,double FDR, int? dataFileId = null)
+        private void WriteAnalysisCollection(IOpenTDReport db,double FDR, int? dataFileId = null)
         {
 
        
@@ -913,7 +927,7 @@ foreach (var par in parameters["Generate SAS Input"])
 
 
 
-        public void WriteSequenceCollection(IOpenTDReport db, double FDR,int? dataFileId = null)
+        private void WriteSequenceCollection(IOpenTDReport db, double FDR,int? dataFileId = null)
         {
             this.WriteStartElement("SequenceCollection");
             var isofroms = db.GetDBSequences(FDR, dataFileId);
@@ -1012,7 +1026,7 @@ foreach (var par in parameters["Generate SAS Input"])
             this.WriteEndElement();
         }
 
-        public void WriteSingleDBSequence(int ID, string accession, string sequence, string searchDBRef, string proteinDescription, int taxID, string sciName)
+        private void WriteSingleDBSequence(int ID, string accession, string sequence, string searchDBRef, string proteinDescription, int taxID, string sciName)
         {
             this.WriteStartElement("DBSequence");
             this.WriteAttributeString("id", $"ISO_{ID}");
@@ -1029,7 +1043,7 @@ foreach (var par in parameters["Generate SAS Input"])
             this.WriteEndElement();
         }
 
-        public void WriteProviderAndAuditCollection()
+        private void WriteProviderAndAuditCollection()
         {
 
             //provider section
@@ -1079,7 +1093,7 @@ foreach (var par in parameters["Generate SAS Input"])
         }
 
 
-        public void WriteMzIDCVList()
+        private void WriteMzIDCVList()
         {
             this.WriteStartElement("cvList");
             this.WriteAttributeString("count", "3");
@@ -1120,7 +1134,7 @@ foreach (var par in parameters["Generate SAS Input"])
         {
             _writer.WriteAttributeString(prefix, localName, ns, value);
         }
-        public void WriteMzIDEndElement()
+        private void WriteMzIDEndElement()
         {
             this.WriteEndElement();
         }
@@ -1141,13 +1155,13 @@ foreach (var par in parameters["Generate SAS Input"])
             _writer.WriteEndElement();
         }
 
-        public void Flush() => _writer?.Flush();
+        private void Flush() => _writer?.Flush();
 
         public void Dispose() => _writer?.Dispose();
 
 
 
-        public static IOpenTDReport TDReportVersionCheck(string file)
+        private static IOpenTDReport TDReportVersionCheck(string file)
         {
             try
             {
