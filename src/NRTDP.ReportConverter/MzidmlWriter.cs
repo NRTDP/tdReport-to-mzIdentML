@@ -11,27 +11,23 @@ namespace NRTDP.tdReportConverter
 {
 
     /// <summary>
-    /// 
+    /// Writes mzidentml (aka mzidml) files
     /// </summary>
     public sealed class MzidmlWriter : IDisposable
     {
         private XmlWriter _writer;
        
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="encoding"></param>
+  
         private MzidmlWriter(Stream stream, Encoding encoding)
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
      /// <summary>
-     /// 
+     /// Converts a tdReport into compressed mzidml files. One for each raw file in the tdReport.
      /// </summary>
-     /// <param name="TDReport"></param>
-     /// <param name="outputFolder"></param>
-     /// <param name="FDR"></param>
+     /// <param name="TDReport">The file path for the tdReport</param>
+     /// <param name="outputFolder">The output folder for the compressed mzidml files</param>
+     /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
         public static void ConvertToSeperateCompressedMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             string tempFilePath = Path.GetTempFileName();
@@ -101,9 +97,9 @@ namespace NRTDP.tdReportConverter
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="TDReport"></param>
-        /// <param name="outputPath"></param>
-        /// <param name="FDR"></param>
+        /// <param name="TDReport">The file path for the tdReport</param>
+        /// <param name="outputFolder">The output file for the mzidml file (include the .mzidml)</param>
+        /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
         public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
@@ -126,9 +122,9 @@ namespace NRTDP.tdReportConverter
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="TDReport"></param>
-        /// <param name="outputFolder"></param>
-        /// <param name="FDR"></param>
+        /// <param name="TDReport">The file path for the tdReport</param>
+        /// <param name="outputFolder">The output folder for the compressed mzidml files</param>
+        /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
         public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);

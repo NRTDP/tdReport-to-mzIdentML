@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
@@ -13,6 +13,7 @@
     <Description>A package for converting tdReports into mzidentml files</Description>
     <Copyright>NRTDP</Copyright>
     <PackageTags>mzIdentml, tdReport</PackageTags>
+    <RepositoryUrl>https://github.com/NRTDP/tdReport-to-mzIdentML</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
