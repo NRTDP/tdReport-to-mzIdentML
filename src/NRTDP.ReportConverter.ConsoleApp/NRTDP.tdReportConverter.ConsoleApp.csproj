@@ -11,4 +11,8 @@
  
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NRTDP.ReportConverter\NRTDP.tdReportConverter.csproj" />
+  </ItemGroup>
+
 </Project>
