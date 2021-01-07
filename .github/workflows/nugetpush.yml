@@ -1,0 +1,30 @@
+name: NRTDP.ReportConverter - Release
+
+on:
+  workflow_run:
+    workflows: [".NET"]
+    branches: [ main ]
+    types:
+      - completed
+
+jobs:
+  publish-nuget:
+    runs-on: Windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '5.0.100'
+    - name: Install dependencies
+      run: dotnet restore - src/NRTDP.ReportConverter.sln
+    - name: Build
+      run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
+    - name: Publish to NuGet
+      uses: brandedoutcast/publish-nuget@v2
+      with:
+        PROJECT_FILE_PATH: src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj
+        VERSION_REGEX: '^\s*<PackageVersion>(.*)<\/PackageVersion>\s*$'
+        TAG_FORMAT: '*'
+        NUGET_KEY: 9A68AB58-8E75-444C-91B7-58BE1EEF4345
+        NUGET_SOURCE: http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary  
