@@ -20,12 +20,11 @@ jobs:
     - name: Build
       run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
       
-    - name: Create NuSpec 
-      run: cd src/NRTDP.ReportConverter
-       | nuget spec NRTDP.tdReportConverter -Verbosity detailed
        
     - name: Create package 
-      run:  nuget pack NRTDP.tdReportConverter.nuspec
+      run:  dotnet pack src/NRTDP.ReportConverter/NRTDP.tdReportConverter.csproj
       
     - name: Publish to NuGet
-      run: nuget push *.nupkg 9A68AB58-8E75-444C-91B7-58BE1EEF4345 -source http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary
+      run: nuget push src\NRTDP.ReportConverter\bin\Debug\*.nupkg 9A68AB58-8E75-444C-91B7-58BE1EEF4345 -source http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary
+       
+
