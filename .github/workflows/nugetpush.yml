@@ -22,6 +22,6 @@ jobs:
       run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
       
     - name: Create Nuget 
-      run: dotnet pack src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj -c Release
+      run: dotnet pack - src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj
       
     
