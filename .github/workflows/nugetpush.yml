@@ -21,7 +21,8 @@ jobs:
       run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
       
     - name: Create Nuget 
-      run: nuget pack src/NRTDP.ReportConverter/NRTDP.tdReportConverter.csproj
+      run: nuget spec src/NRTDP.ReportConverter/NRTDP.tdReportConverter.csproj
+        nuget pack *.nuspec
       
     - name: Publish to NuGet
       run: nuget push *.nupkg 9A68AB58-8E75-444C-91B7-58BE1EEF4345 -source http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary
