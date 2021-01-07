@@ -3,12 +3,16 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>NRTDP.tdReportConverter</AssemblyName>
-    <RootNamespace>NRTDP.ReportConverter</RootNamespace>
+    <RootNamespace>NRTDP.tdReportConverter</RootNamespace>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Company>Northwestern University</Company>
     <Authors>NRTDP</Authors>
     <PackageId>NRTDP.tdReportConverter</PackageId>
+    <Version>1.0.1</Version>
+    <Description>A package for converting tdReports into mzidentml files</Description>
+    <Copyright>NRTDP</Copyright>
+    <PackageTags>mzIdentml, tdReport</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
