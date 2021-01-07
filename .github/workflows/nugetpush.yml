@@ -21,10 +21,5 @@ jobs:
     - name: Build
       run: dotnet build - src/NRTDP.ReportConverter.sln --no-restore
     - name: Publish to NuGet
-      uses: brandedoutcast/publish-nuget@v2
-      with:
-        PROJECT_FILE_PATH: src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj
-        VERSION_STATIC: 1.0.0
-        TAG_FORMAT: '*'
-        NUGET_KEY: 9A68AB58-8E75-444C-91B7-58BE1EEF4345
-        NUGET_SOURCE: http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary  
+      run: nuget push src/NRTDP.ReportConverter/NRTDP.ReportConverter.csproj 9A68AB58-8E75-444C-91B7-58BE1EEF4345 -source http://proget.kelleher.northwestern.edu/nuget/TopDownLibrary
+     
