@@ -6,10 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="5.0.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="2.1.2" />
+   
     <PackageReference Include="NRTDP.tdReportConverter" Version="1.0.1" />
  
   </ItemGroup>
