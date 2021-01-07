@@ -1,11 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <AssemblyName>NRTDP.ReportConverter</AssemblyName>
+    <AssemblyName>NRTDP.tdReportConverter</AssemblyName>
     <RootNamespace>NRTDP.ReportConverter</RootNamespace>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Company>Northwestern University</Company>
+    <Authors>NRTDP</Authors>
+    <PackageId>NRTDP.tdReportConverter</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

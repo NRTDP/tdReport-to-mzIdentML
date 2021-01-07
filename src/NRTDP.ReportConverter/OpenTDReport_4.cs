@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NRTDP.TDReport4;
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.tdReportConverter
 {/// <summary>
 /// A class for opening and reading tdReports version 4.0 
 /// This is the main class that pulls queries from the sqlite database - there are differences between 3.0 and 4.0 tdReports which require different classes

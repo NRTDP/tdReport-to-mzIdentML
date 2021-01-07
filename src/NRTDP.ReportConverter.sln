@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30428.66
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRTDP.ReportConverter", "NRTDP.ReportConverter\NRTDP.ReportConverter.csproj", "{D4DF293D-2827-46C3-8DBA-0C5CBA150775}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRTDP.tdReportConverter", "NRTDP.ReportConverter\NRTDP.tdReportConverter.csproj", "{D4DF293D-2827-46C3-8DBA-0C5CBA150775}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRTDP.ReportConverter.ConsoleApp", "NRTDP.ReportConverter.ConsoleApp\NRTDP.ReportConverter.ConsoleApp.csproj", "{1020E854-9E7F-433C-8FC7-897FEF3987B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRTDP.tdReportConverter.ConsoleApp", "NRTDP.ReportConverter.ConsoleApp\NRTDP.tdReportConverter.ConsoleApp.csproj", "{1020E854-9E7F-433C-8FC7-897FEF3987B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

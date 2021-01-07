@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NRTDP.TDReport31;
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.tdReportConverter
 {
     internal class OpenTDReport_31 : IDisposable, IOpenTDReport
     {

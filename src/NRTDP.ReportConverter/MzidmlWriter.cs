@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.tdReportConverter
 {
 
     /// <summary>
@@ -89,7 +89,12 @@ namespace NRTDP.ReportConverter
             }
             _db.Dispose();
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="TDReport"></param>
+        /// <param name="outputPath"></param>
+        /// <param name="FDR"></param>
         public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace NRTDP.ReportConverter
+namespace NRTDP.tdReportConverter
 {
     /// <summary>
     /// 
