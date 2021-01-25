@@ -601,7 +601,7 @@ var dataFiles = db.GetDataFiles();
 
                 case "Zdot":
                     {
-                        this.WriteCVParam("MS:1001367", "frag: z + 1 ion");
+                        this.WriteCVParam("MS:1001230", "frag: z ion");
                     }
                     break;
 
@@ -1061,8 +1061,12 @@ foreach (var par in parameters["Generate SAS Input"])
             _writer.WriteString(sequence);
             this.WriteEndElement();
             this.WriteCVParam("MS:1001088", "protein description", proteinDescription);
-            this.WriteCVParam("MS:1001469", "taxonomy: scientific name", sciName);
+            if (taxID > 0)
+            {
+ this.WriteCVParam("MS:1001469", "taxonomy: scientific name", sciName);
             this.WriteCVParam("MS:1001467", "taxonomy: NCBI TaxID", $"{taxID}");
+            }
+           
 
             this.WriteEndElement();
         }
