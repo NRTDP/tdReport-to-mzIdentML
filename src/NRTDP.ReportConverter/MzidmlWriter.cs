@@ -581,6 +581,34 @@ var dataFiles = db.GetDataFiles();
                         this.WriteCVParam("MS:1001230", "frag: z ion");
                     }
                     break;
+
+                case "A+":
+                    {
+                        this.WriteCVParam("MS:1001229", "frag: a ion");
+                    }
+                    break;
+                case "X+":
+                    {
+                        this.WriteCVParam("MS:1001228", "frag: x ion");
+                    }
+                    break;
+                case "Y-":
+                    {
+                        this.WriteCVParam("MS:1001220", "frag: y ion");
+                    }
+                    break;
+              
+
+                case "Zdot":
+                    {
+                        this.WriteCVParam("MS:1001367", "frag: z + 1 ion");
+                    }
+                    break;
+
+                default:
+                    {
+                        throw new Exception("Fragment Ion Type Could not be Parsed");
+                    }
             }
         }
 
@@ -976,7 +1004,7 @@ foreach (var par in parameters["Generate SAS Input"])
                     foreach (var pepmod in pepmods)
                     {
                         this.WriteStartElement("Modification");
-                        this.WriteAttributeString("location", $"{pepmod.StartIndex}");
+                        this.WriteAttributeString("location", $"{pepmod.StartIndex+1}");
                         this.WriteAttributeString("monoisotopicMassDelta", $"{pepmod.DiffMono}");
                         this.WriteAttributeString("avgMassDelta", $"{pepmod.DiffAverage}");
                         this.WriteAttributeString("residues", $"{pepmod.AminoAcid}");
