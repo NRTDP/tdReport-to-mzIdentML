@@ -54,7 +54,7 @@ namespace NRTDP.tdReportConverter
                     writer.WriteAnalysisSoftwareList();
                     writer.WriteProviderAndAuditCollection();
                     writer.WriteSequenceCollection(_db, FDR, dataset.Key);
-                    writer.WriteAnalysisCollection(_db, dataset.Key);
+                    writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
                     writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
                 }
              
