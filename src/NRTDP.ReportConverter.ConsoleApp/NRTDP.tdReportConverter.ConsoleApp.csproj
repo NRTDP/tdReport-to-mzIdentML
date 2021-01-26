@@ -6,12 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-   
-    <PackageReference Include="NRTDP.tdReportConverter" Version="1.0.1" />
- 
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\NRTDP.ReportConverter\NRTDP.tdReportConverter.csproj" />
   </ItemGroup>
 

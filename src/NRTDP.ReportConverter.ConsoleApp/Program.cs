@@ -13,7 +13,7 @@ namespace NRTDP.tdReportConverter.ConsoleApp
             var sw = new Stopwatch();
             sw.Start();
 
-            MzidmlWriter.ConvertToSeperateCompressedMzId(@"C:\Data\BPA_Test\BPA_ALL_2020_0808.tdReport", @"C:\Data\BPA_Test", 0.05);
+            MzidmlWriter.ConvertToSeperateCompressedMzId(args[0], args[1], 0.05);
           
             
             Console.WriteLine(sw.Elapsed);

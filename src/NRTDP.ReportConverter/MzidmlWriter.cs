@@ -284,7 +284,7 @@ var dataFiles = db.GetDataFiles();
                                     foreach (var type in charge.Value)
                                     {
                                         IEnumerable<FragmentIon> fragArray;
-                                        if (type.Key == "B" || type.Key == "C" || type.Key == "A")
+                                        if (type.Key == "B" || type.Key == "C" || type.Key == "A" || type.Key == "A+")
                                         {
                                             fragArray = type.Value.OrderBy(x => x.IonNumber);
                                         }
