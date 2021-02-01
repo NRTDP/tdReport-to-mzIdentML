@@ -40,8 +40,9 @@ namespace NRTDP.tdReportConverter
             double count = 0.0;
             foreach (var dataset in datasets)
             {
+                
                 var rawFileName = dataset.Value.Item1;
-
+Console.WriteLine($"Processing {rawFileName}");
                 var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid.zip");
 
                 // Write the opening and short xml with a single stream 
