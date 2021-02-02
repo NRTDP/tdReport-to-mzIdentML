@@ -9,25 +9,24 @@ using System.Xml;
 
 namespace NRTDP.tdReportConverter
 {
-
     /// <summary>
     /// Writes mzidentml (aka mzidml) files
     /// </summary>
     public sealed class MzidmlWriter : IDisposable
     {
         private XmlWriter _writer;
-       
-  
+
         private MzidmlWriter(Stream stream, Encoding encoding)
         {
             _writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = encoding, Indent = true });
         }
-     /// <summary>
-     /// Converts a tdReport into compressed mzidml files. One for each raw file in the tdReport.
-     /// </summary>
-     /// <param name="TDReport">The file path for the tdReport</param>
-     /// <param name="outputFolder">The output folder for the compressed mzidml files</param>
-     /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
+
+        /// <summary>
+        /// Converts a tdReport into compressed mzidml files. One for each raw file in the tdReport.
+        /// </summary>
+        /// <param name="TDReport">The file path for the tdReport</param>
+        /// <param name="outputFolder">The output folder for the compressed mzidml files</param>
+        /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
         public static void ConvertToSeperateCompressedMzId(string TDReport, string outputFolder, double FDR = 0.05)
         {
             string tempFilePath = Path.GetTempFileName();
@@ -46,7 +45,7 @@ namespace NRTDP.tdReportConverter
 
                 // Write the opening and short xml with a single stream 
                 using (FileStream stream = File.Create(tempFilePath))
-                using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
+                using (MzidmlWriter writer = new(stream, Encoding.ASCII))
                 {
                     writer.WriteStartDoc();
                     writer.WriteMzIDStartElement(inputFileInfo.Name);
@@ -57,11 +56,9 @@ namespace NRTDP.tdReportConverter
                     writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
                     writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
                 }
-             
 
                 using (FileStream sourcefs = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read))
                 using (FileStream fs = new FileStream(outputPath, FileMode.Create))
-                
                 {
                     byte[] bytes = new byte[sourcefs.Length];
                     int numBytesToRead = (int)sourcefs.Length;
@@ -80,17 +77,16 @@ namespace NRTDP.tdReportConverter
                     }
                     numBytesToRead = bytes.Length;
 
-
-                    using (var compressionStream = new GZipStream(fs,
-            CompressionMode.Compress))
+                    using (var compressionStream = new GZipStream(fs, CompressionMode.Compress))
                     {
                         compressionStream.Write(bytes, 0, bytes.Length);
                         compressionStream.Flush();
                     }
                 }
+
                 File.Delete(tempFilePath);
                 count++;
-                Console.WriteLine(count/datasets.Count());
+                Console.WriteLine(count / datasets.Count());
             }
             _db.Dispose();
         }
@@ -103,7 +99,7 @@ namespace NRTDP.tdReportConverter
         public static void ConvertToSingleMzId(string TDReport, string outputPath, double FDR = 0.05)
         {
             var inputFileInfo = new FileInfo(TDReport);
-            var _db =  TDReportVersionCheck(inputFileInfo.FullName);
+            var _db = TDReportVersionCheck(inputFileInfo.FullName);
 
             using (FileStream stream = File.Create(outputPath))
             using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
@@ -114,11 +110,12 @@ namespace NRTDP.tdReportConverter
                 writer.WriteAnalysisSoftwareList();
                 writer.WriteProviderAndAuditCollection();
                 writer.WriteSequenceCollection(_db, FDR);
-                writer.WriteAnalysisCollection(_db,FDR);
+                writer.WriteAnalysisCollection(_db, FDR);
                 writer.WriteDataCollection(_db, inputFileInfo, FDR);
             }
             _db.Dispose();
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -138,24 +135,24 @@ namespace NRTDP.tdReportConverter
                 var rawFileName = dataset.Value.Item1;
 
                 var outputPath = Path.Join(outputFolder, $"{Path.GetFileNameWithoutExtension(rawFileName)}.mzid");
-                
-            using (FileStream stream = File.Create(outputPath))
-            using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
-            {
-                writer.WriteStartDoc();
-                writer.WriteMzIDStartElement(inputFileInfo.Name);
-                writer.WriteMzIDCVList();
-                writer.WriteAnalysisSoftwareList();
-                writer.WriteProviderAndAuditCollection();
-                writer.WriteSequenceCollection(_db, FDR, dataset.Key);
-                writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
-                writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
-            }
+
+                using (FileStream stream = File.Create(outputPath))
+                using (MzidmlWriter writer = new MzidmlWriter(stream, Encoding.ASCII))
+                {
+                    writer.WriteStartDoc();
+                    writer.WriteMzIDStartElement(inputFileInfo.Name);
+                    writer.WriteMzIDCVList();
+                    writer.WriteAnalysisSoftwareList();
+                    writer.WriteProviderAndAuditCollection();
+                    writer.WriteSequenceCollection(_db, FDR, dataset.Key);
+                    writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
+                    writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
+                }
             }
             _db.Dispose();
         }
 
-        private void WriteDataCollection(IOpenTDReport db,FileInfo inputFileInfo, double FDR, int? dataSetId = null)
+        private void WriteDataCollection(IOpenTDReport db, FileInfo inputFileInfo, double FDR, int? dataSetId = null)
         {
             this.WriteStartElement("DataCollection");
             this.WriteStartElement("Inputs");
@@ -173,7 +170,7 @@ namespace NRTDP.tdReportConverter
             this.WriteEndElement();
 
             //SpectraDAta
-var dataFiles = db.GetDataFiles();
+            var dataFiles = db.GetDataFiles();
             if (dataSetId.HasValue)
             {
                 this.WriteStartElement("SpectraData");
@@ -190,34 +187,30 @@ var dataFiles = db.GetDataFiles();
 
                 this.WriteEndElement();
             }
-            else{
-            
-             
-            foreach (var file in dataFiles)
+            else
             {
+                foreach (var file in dataFiles)
+                {
+                    this.WriteStartElement("SpectraData");
+                    this.WriteAttributeString("location", file.Value.Item2);
+                    this.WriteAttributeString("id", $"SD_{file.Key}");
+                    this.WriteAttributeString("name", $"SD_{file.Value.Item1}");
+                    this.WriteStartElement("FileFormat");
+                    this.WriteCVParam("MS:1000563", "Thermo RAW format");
+                    this.WriteEndElement();
 
-                this.WriteStartElement("SpectraData"); 
-                this.WriteAttributeString("location", file.Value.Item2);
-                this.WriteAttributeString("id", $"SD_{file.Key}");
-                this.WriteAttributeString("name", $"SD_{file.Value.Item1}");
-                this.WriteStartElement("FileFormat");
-                this.WriteCVParam("MS:1000563", "Thermo RAW format");
-                this.WriteEndElement();
+                    this.WriteStartElement("SpectrumIDFormat");
+                    this.WriteCVParam("MS:1000768", "Thermo nativeID format");
+                    this.WriteEndElement();
 
-                this.WriteStartElement("SpectrumIDFormat");
-                this.WriteCVParam("MS:1000768", "Thermo nativeID format");
-                this.WriteEndElement();
-
-                this.WriteEndElement();
+                    this.WriteEndElement();
+                }
             }
-            }
-           
-          
+
             this.WriteEndElement(); //End inputs
 
-
             //AnalysisData goes here
-          
+
             this.WriteAnalysisData(db, FDR, dataSetId);
 
             this.WriteEndElement(); //End DataCollection
@@ -250,21 +243,171 @@ var dataFiles = db.GetDataFiles();
                     this.WriteEndElement();
                     this.WriteEndElement();
 
-                        var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, dataSetId.Value, FDR);
+                    var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, dataSetId.Value, FDR);
+                    foreach (var scan in hits)
+                    {
+                        //start SpectrumIdentificationResult one for each spectraData (aka raw file)
+                        this.WriteStartElement("SpectrumIdentificationResult");
+                        this.WriteAttributeString("id", $"SIR_{resultSet.Key}_{dataSetId}_{scan.Key}");
+                        //this.WriteAttributeString("name", $"{resultSet.Value}");
+                        this.WriteAttributeString("spectraData_ref", $"SD_{dataSetId.Value}");
+                        this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {scan.Key}");
+
+                        foreach (var hit in hits[scan.Key])
+                        {
+
+                            this.WriteStartElement("SpectrumIdentificationItem");
+                            this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{dataSetId.Value}");
+                            this.WriteAttributeString("calculatedMassToCharge", String.Format("{0:f5}", hit.Value.TheoPreMass + 1.00728));
+                            this.WriteAttributeString("chargeState", $"1");
+                            this.WriteAttributeString("experimentalMassToCharge", String.Format("{0:f5}", hit.Value.ObsPreMass + 1.00728));
+                            this.WriteAttributeString("peptide_ref", $"Chem_{hit.Value.ChemId}");
+                            this.WriteAttributeString("rank", $"1");
+                            this.WriteAttributeString("passThreshold", $"true");
+
+                            foreach (var iso in hit.Value.IsoformId)
+                            {
+                                this.WriteStartElement("PeptideEvidenceRef");
+                                this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{hit.Value.ChemId}_ISO_{iso}");
+                                this.WriteEndElement();
+                            }
+                            this.WriteStartElement("Fragmentation");
+                            foreach (var charge in hit.Value.FragmentIons)
+                            {
+                                foreach (var type in charge.Value)
+                                {
+                                    IEnumerable<FragmentIon> fragArray;
+                                    if (type.Key == "B" || type.Key == "C" || type.Key == "A" || type.Key == "A+")
+                                    {
+                                        fragArray = type.Value.OrderBy(x => x.IonNumber);
+                                    }
+                                    else
+                                    {
+                                        fragArray = type.Value.OrderByDescending(x => x.IonNumber);
+                                    }
+
+                                    this.WriteStartElement("IonType");
+                                    this.WriteAttributeString("index", string.Join(" ", fragArray.Select(x => x.IonNumber).ToArray()));
+                                    this.WriteAttributeString("charge", $"{charge.Key}");
+                                    this.WriteFragType(type.Key);
+                                    this.WriteStartElement("FragmentArray");
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz.ToString("f4")).ToArray()));
+                                    this.WriteAttributeString("measure_ref", "m_mz");
+                                    this.WriteEndElement();
+
+                                    this.WriteStartElement("FragmentArray");
+                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => (x.ObservedMz - x.TheoreticalMz).ToString("e4")).ToArray()));
+                                    this.WriteAttributeString("measure_ref", "m_error");
+                                    this.WriteEndElement();
+
+                                    this.WriteEndElement();
+                                }
+                            }
+
+                            this.WriteEndElement();//end fragmenation
+
+                            //Make CV for these?
+                            this.WriteCVParam("MS:1003126", "ProSight:spectral P-score", String.Format("{0:g4}", hit.Value.PScore));
+                            this.WriteCVParam("MS:1003127", "ProSight:spectral E-value", String.Format("{0:g2}", hit.Value.EValue));
+                            this.WriteCVParam("MS:1003128", "ProSight:spectral C-score", String.Format("{0:g4}", hit.Value.CScore));
+                            this.WriteCVParam("MS:1003125", "ProSight:spectral Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
+
+                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages)); // is there a CV for this?
+
+
+                            this.WriteEndElement();
+                        }
+
+                        this.WriteEndElement();
+                    }
+
+                    this.WriteEndElement(); //end  SpectrumIdentificationList
+                }
+
+                foreach (var resultSet in resultSets)
+                {
+                    //Write  SpectrumIdentificationList
+                    this.WriteStartElement("ProteinDetectionList");
+                    this.WriteAttributeString("id", $"PDL_{resultSet.Key}");
+                    this.WriteAttributeString("name", $"{resultSet.Value}");
+
+                    var isoforms = db.GetproteinDetectiondata(resultSet.Key, dataSetId.Value, FDR);
+                    foreach (var isoform in isoforms)
+                    {
+                        //start ProteinAmbiguityGroup
+                        this.WriteStartElement("ProteinAmbiguityGroup");
+                        this.WriteAttributeString("id", $"PAG_{isoform.Key}_{resultSet.Key}_{dataSetId.Value}"); // set to isform maybe entry!?
+                        this.WriteStartElement("ProteinDetectionHypothesis");
+                        this.WriteAttributeString("id", $"PDH_{isoform.Key}_{resultSet.Key}_{dataSetId.Value}");
+                        this.WriteAttributeString("dBSequence_ref", $"ISO_{isoform.Key}");
+                        this.WriteAttributeString("passThreshold", $"true");
+
+                        foreach (var chem in isoforms[isoform.Key])
+                        {
+                            this.WriteStartElement("PeptideHypothesis");
+                            this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{chem.Key}_ISO_{isoform.Key}");
+                            foreach (var hit in chem.Value.HitId)
+                            {
+                                this.WriteStartElement("SpectrumIdentificationItemRef");
+                                this.WriteAttributeString("spectrumIdentificationItem_ref", $"SII_Hit_{hit}_{resultSet.Key}_{dataSetId.Value}");
+                                this.WriteEndElement();
+                            }
+
+                            this.WriteEndElement();
+                        }
+
+                        this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
+
+                        this.WriteEndElement();
+                        this.WriteEndElement();
+                    }
+
+                    this.WriteEndElement();
+                }
+
+                this.WriteEndElement();
+            }
+            else
+            {
+                this.WriteStartElement("AnalysisData");
+                foreach (var resultSet in resultSets)
+                {
+                    //Write  SpectrumIdentificationList
+                    this.WriteStartElement("SpectrumIdentificationList");
+                    this.WriteAttributeString("id", $"SIL_{resultSet.Key}");
+                    this.WriteAttributeString("name", $"{resultSet.Value}");
+
+                    //Fragmentation Table
+                    this.WriteStartElement("FragmentationTable");
+                    this.WriteStartElement("Measure");
+                    this.WriteAttributeString("id", "m_mz");
+                    this.WriteCVParam("MS:1001225", "product ion m/z");
+                    this.WriteEndElement();
+
+                    this.WriteStartElement("m_error");
+                    this.WriteAttributeString("id", "m_mz");
+                    this.WriteCVParam("MS:1001227", "product ion m/z error", unitRef: "PSI-MS", unitAccession: "MS:1000040", unitName: "m/z");
+                    this.WriteEndElement();
+                    this.WriteEndElement();
+
+                    foreach (var rawfile in rawFiles)
+                    {
+
+                        var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, rawfile.Key, FDR);
                         foreach (var scan in hits)
                         {
                             //start SpectrumIdentificationResult one for each spectraData (aka raw file)
                             this.WriteStartElement("SpectrumIdentificationResult");
-                            this.WriteAttributeString("id", $"SIR_{resultSet.Key}_{dataSetId}_{scan.Key}");
+                            this.WriteAttributeString("id", $"SIR_{resultSet.Key}_{rawfile.Key}_{scan.Key}");
                             //this.WriteAttributeString("name", $"{resultSet.Value}");
-                            this.WriteAttributeString("spectraData_ref", $"SD_{dataSetId.Value}");
+                            this.WriteAttributeString("spectraData_ref", $"SD_{rawfile.Key}");
                             this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {scan.Key}");
 
                             foreach (var hit in hits[scan.Key])
                             {
 
                                 this.WriteStartElement("SpectrumIdentificationItem");
-                                this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{dataSetId.Value}");
+                                this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{rawfile.Key}");
                                 this.WriteAttributeString("calculatedMassToCharge", String.Format("{0:f5}", hit.Value.TheoPreMass + 1.00728));
                                 this.WriteAttributeString("chargeState", $"1");
                                 this.WriteAttributeString("experimentalMassToCharge", String.Format("{0:f5}", hit.Value.ObsPreMass + 1.00728));
@@ -278,13 +421,14 @@ var dataFiles = db.GetDataFiles();
                                     this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{hit.Value.ChemId}_ISO_{iso}");
                                     this.WriteEndElement();
                                 }
+
                                 this.WriteStartElement("Fragmentation");
                                 foreach (var charge in hit.Value.FragmentIons)
                                 {
                                     foreach (var type in charge.Value)
                                     {
                                         IEnumerable<FragmentIon> fragArray;
-                                        if (type.Key == "B" || type.Key == "C" || type.Key == "A" || type.Key == "A+")
+                                        if (type.Key == "B" || type.Key == "C" || type.Key == "A")
                                         {
                                             fragArray = type.Value.OrderBy(x => x.IonNumber);
                                         }
@@ -308,165 +452,10 @@ var dataFiles = db.GetDataFiles();
                                         this.WriteEndElement();
 
                                         this.WriteEndElement();
-
                                     }
                                 }
 
                                 this.WriteEndElement();//end fragmenation
-
-                            //Make CV for these?
-                            this.WriteCVParam("MS:1003126", "ProSight:spectral P-score", String.Format("{0:g4}", hit.Value.PScore));
-                            this.WriteCVParam("MS:1003127", "ProSight:spectral E-value", String.Format("{0:g2}", hit.Value.EValue));
-                            this.WriteCVParam("MS:1003128", "ProSight:spectral C-score", String.Format("{0:g4}", hit.Value.CScore));
-                            this.WriteCVParam("MS:1003125", "ProSight:spectral Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
-
-                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages)); // is there a CV for this?
-
-                            
-                                this.WriteEndElement();
-                            }
-
-                            this.WriteEndElement();
-                        }
-
-                    this.WriteEndElement(); //end  SpectrumIdentificationList
-                }
-
-
-                foreach (var resultSet in resultSets)
-                {
-                    //Write  SpectrumIdentificationList
-                    this.WriteStartElement("ProteinDetectionList");
-                    this.WriteAttributeString("id", $"PDL_{resultSet.Key}");
-                    this.WriteAttributeString("name", $"{resultSet.Value}");
-
-                        var isoforms = db.GetproteinDetectiondata(resultSet.Key, dataSetId.Value, FDR);
-                        foreach (var isoform in isoforms)
-                        {
-                            //start ProteinAmbiguityGroup
-                            this.WriteStartElement("ProteinAmbiguityGroup");
-                            this.WriteAttributeString("id", $"PAG_{isoform.Key}_{resultSet.Key}_{dataSetId.Value}"); // set to isform maybe entry!?
-                            this.WriteStartElement("ProteinDetectionHypothesis");
-                            this.WriteAttributeString("id", $"PDH_{isoform.Key}_{resultSet.Key}_{dataSetId.Value}");
-                            this.WriteAttributeString("dBSequence_ref", $"ISO_{isoform.Key}");
-                            this.WriteAttributeString("passThreshold", $"true");
-
-
-                            foreach (var chem in isoforms[isoform.Key])
-                            {
-                                this.WriteStartElement("PeptideHypothesis");
-                                this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{chem.Key}_ISO_{isoform.Key}");
-                                foreach (var hit in chem.Value.HitId)
-                                {
-                                    this.WriteStartElement("SpectrumIdentificationItemRef");
-                                    this.WriteAttributeString("spectrumIdentificationItem_ref", $"SII_Hit_{hit}_{resultSet.Key}_{dataSetId.Value}");
-                                    this.WriteEndElement();
-                                }
-
-                                this.WriteEndElement();
-
-                            }
-                        this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
-                           
-
-                            this.WriteEndElement();
-                            this.WriteEndElement();
-                        }
-
-                    this.WriteEndElement();
-                }
-
-                this.WriteEndElement();
-            }
-            else
-            {
- this.WriteStartElement("AnalysisData");
-            foreach (var resultSet in resultSets)
-            {
-                //Write  SpectrumIdentificationList
-                this.WriteStartElement("SpectrumIdentificationList");
-                this.WriteAttributeString("id", $"SIL_{resultSet.Key}");
-                this.WriteAttributeString("name", $"{resultSet.Value}");
-
-                //Fragmentation Table
-                this.WriteStartElement("FragmentationTable");
-                this.WriteStartElement("Measure");
-                this.WriteAttributeString("id", "m_mz");
-                this.WriteCVParam("MS:1001225", "product ion m/z");
-                this.WriteEndElement();
-
-                this.WriteStartElement("m_error");
-                this.WriteAttributeString("id", "m_mz");
-                this.WriteCVParam( "MS:1001227", "product ion m/z error",unitRef: "PSI-MS", unitAccession: "MS:1000040",unitName: "m/z");
-                this.WriteEndElement();
-                this.WriteEndElement();
-
-
-                foreach (var rawfile in rawFiles)
-                {
-
-                   var hits = db.CreateBatchOfHitsWithIons(resultSet.Key, rawfile.Key,FDR);
-                    foreach (var scan in hits)
-                    {
-//start SpectrumIdentificationResult one for each spectraData (aka raw file)
-                    this.WriteStartElement("SpectrumIdentificationResult");
-                this.WriteAttributeString("id", $"SIR_{resultSet.Key}_{rawfile.Key}_{scan.Key}");
-                //this.WriteAttributeString("name", $"{resultSet.Value}");
-                this.WriteAttributeString("spectraData_ref", $"SD_{rawfile.Key}");
-                        this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {scan.Key}");
-                        
-                    foreach (var hit in hits[scan.Key])
-                    {
-
-                        this.WriteStartElement("SpectrumIdentificationItem");
-                        this.WriteAttributeString("id", $"SII_Hit_{hit.Key}_{resultSet.Key}_{rawfile.Key}");
-                        this.WriteAttributeString("calculatedMassToCharge", String.Format("{0:f5}",hit.Value.TheoPreMass + 1.00728));
-                        this.WriteAttributeString("chargeState", $"1");
-                        this.WriteAttributeString("experimentalMassToCharge", String.Format("{0:f5}", hit.Value.ObsPreMass + 1.00728));
-                        this.WriteAttributeString("peptide_ref", $"Chem_{hit.Value.ChemId}");
-                        this.WriteAttributeString("rank", $"1");
-                        this.WriteAttributeString("passThreshold", $"true");
-
-                        foreach (var iso in hit.Value.IsoformId)
-                        {
-                            this.WriteStartElement("PeptideEvidenceRef");
-                            this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{hit.Value.ChemId}_ISO_{iso}");
-                            this.WriteEndElement();
-                        }
-                        this.WriteStartElement("Fragmentation");
-                            foreach (var charge in hit.Value.FragmentIons)
-                            {
-                                foreach (var type in charge.Value)
-                                {
-                                    IEnumerable<FragmentIon> fragArray;
-                                    if (type.Key == "B" || type.Key == "C" || type.Key == "A")
-                                    {
-                                        fragArray =  type.Value.OrderBy(x => x.IonNumber);
-                                    }
-                                    else
-                                    {
-                                        fragArray = type.Value.OrderByDescending(x => x.IonNumber);
-                                    }
-
-                                        this.WriteStartElement("IonType");
-                                        this.WriteAttributeString("index", string.Join(" ",fragArray.Select(x => x.IonNumber).ToArray()));
-                                        this.WriteAttributeString("charge", $"{charge.Key}");
-                                        this.WriteFragType(type.Key);
-                                        this.WriteStartElement("FragmentArray");
-                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => x.ObservedMz.ToString("f4")).ToArray()));
-                                    this.WriteAttributeString("measure_ref", "m_mz");
-                                    this.WriteEndElement();
-
-                                    this.WriteStartElement("FragmentArray");
-                                    this.WriteAttributeString("values", string.Join(" ", fragArray.Select(x => (x.ObservedMz - x.TheoreticalMz).ToString("e4")).ToArray()));
-                                    this.WriteAttributeString("measure_ref", "m_error");
-                                    this.WriteEndElement();
-
-                                    this.WriteEndElement();
-                                }
-                            }
-
-                        this.WriteEndElement();//end fragmenation
 
                                 //Make CV for these?
                                 this.WriteCVParam("MS:1003126", "ProSight:spectral P-score", String.Format("{0:g4}", hit.Value.PScore));
@@ -478,69 +467,68 @@ var dataFiles = db.GetDataFiles();
 
 
                                 this.WriteEndElement();
-                    }
-
-                    //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
-
-
-                    //List of all SpectrumIdentificationItems - Hits!
-
-                    this.WriteEndElement();
-                    }
-                }
-
-                this.WriteEndElement(); //end  SpectrumIdentificationList
-            }
-
-            foreach (var resultSet in resultSets)
-            {
-                //Write  SpectrumIdentificationList
-                this.WriteStartElement("ProteinDetectionList");
-                this.WriteAttributeString("id", $"PDL_{resultSet.Key}");
-                this.WriteAttributeString("name", $"{resultSet.Value}");
-
- 
-                foreach (var rawfile in rawFiles)
-                {
-
-                    var isoforms = db.GetproteinDetectiondata(resultSet.Key, rawfile.Key,FDR);
-                    foreach (var isoform in isoforms)
-                    {
-                        //start ProteinAmbiguityGroup
-                        this.WriteStartElement("ProteinAmbiguityGroup");
-                        this.WriteAttributeString("id", $"PAG_{isoform.Key}_{resultSet.Key}_{rawfile.Key}"); // set to isform maybe entry!?
-                            this.WriteStartElement("ProteinDetectionHypothesis");
-                            this.WriteAttributeString("id", $"PDH_{isoform.Key}_{resultSet.Key}_{rawfile.Key}");
-                        this.WriteAttributeString("dBSequence_ref", $"ISO_{isoform.Key}");
-                        this.WriteAttributeString("passThreshold", $"true");
-
-                        
-                        foreach (var chem in isoforms[isoform.Key])
-                        {
-                            this.WriteStartElement("PeptideHypothesis");
-                            this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{chem.Key}_ISO_{isoform.Key}");
-                            foreach (var hit in chem.Value.HitId)
-                            {
-                                this.WriteStartElement("SpectrumIdentificationItemRef");
-                                this.WriteAttributeString("spectrumIdentificationItem_ref", $"SII_Hit_{hit}_{resultSet.Key}_{rawfile.Key}");
-                                this.WriteEndElement();
                             }
 
+                            //this.WriteAttributeString("spectrumID", $"controllerType = 0 controllerNumber = 1 scan = {}");
+
+                            //List of all SpectrumIdentificationItems - Hits!
+
                             this.WriteEndElement();
-                            
                         }
+                    }
+
+                    this.WriteEndElement(); //end  SpectrumIdentificationList
+                }
+
+                foreach (var resultSet in resultSets)
+                {
+                    //Write  SpectrumIdentificationList
+                    this.WriteStartElement("ProteinDetectionList");
+                    this.WriteAttributeString("id", $"PDL_{resultSet.Key}");
+                    this.WriteAttributeString("name", $"{resultSet.Value}");
+
+
+                    foreach (var rawfile in rawFiles)
+                    {
+
+                        var isoforms = db.GetproteinDetectiondata(resultSet.Key, rawfile.Key, FDR);
+                        foreach (var isoform in isoforms)
+                        {
+                            //start ProteinAmbiguityGroup
+                            this.WriteStartElement("ProteinAmbiguityGroup");
+                            this.WriteAttributeString("id", $"PAG_{isoform.Key}_{resultSet.Key}_{rawfile.Key}"); // set to isform maybe entry!?
+                            this.WriteStartElement("ProteinDetectionHypothesis");
+                            this.WriteAttributeString("id", $"PDH_{isoform.Key}_{resultSet.Key}_{rawfile.Key}");
+                            this.WriteAttributeString("dBSequence_ref", $"ISO_{isoform.Key}");
+                            this.WriteAttributeString("passThreshold", $"true");
+
+
+                            foreach (var chem in isoforms[isoform.Key])
+                            {
+                                this.WriteStartElement("PeptideHypothesis");
+                                this.WriteAttributeString("peptideEvidence_ref", $"PE_Chem_{chem.Key}_ISO_{isoform.Key}");
+                                foreach (var hit in chem.Value.HitId)
+                                {
+                                    this.WriteStartElement("SpectrumIdentificationItemRef");
+                                    this.WriteAttributeString("spectrumIdentificationItem_ref", $"SII_Hit_{hit}_{resultSet.Key}_{rawfile.Key}");
+                                    this.WriteEndElement();
+                                }
+
+                                this.WriteEndElement();
+
+                            }
                             this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
 
 
                             this.WriteEndElement();
-                        this.WriteEndElement();
+                            this.WriteEndElement();
+                        }
                     }
+
+                    this.WriteEndElement();
                 }
 
-                this.WriteEndElement(); 
-            }
-
-            this.WriteEndElement();
+                this.WriteEndElement();
             }
         }
 
@@ -597,7 +585,7 @@ var dataFiles = db.GetDataFiles();
                         this.WriteCVParam("MS:1001220", "frag: y ion");
                     }
                     break;
-              
+
 
                 case "Zdot":
                     {
@@ -612,7 +600,7 @@ var dataFiles = db.GetDataFiles();
             }
         }
 
-        private void WriteCVParam(string accession, string name, string value = "",  string unitRef = "", string unitAccession = "", string unitName = "", string cvRef = "PSI-MS")
+        private void WriteCVParam(string accession, string name, string value = "", string unitRef = "", string unitAccession = "", string unitName = "", string cvRef = "PSI-MS")
         {
             this.WriteStartElement("cvParam");
             this.WriteAttributeString("cvRef", cvRef);
@@ -631,7 +619,6 @@ var dataFiles = db.GetDataFiles();
 
             this.WriteEndElement();
         }
-
 
         private void WriteUserParam(string name, string value = "", string type = "", string unitRef = "", string unitAccession = "", string unitName = "")
         {
@@ -694,10 +681,8 @@ var dataFiles = db.GetDataFiles();
             this.WriteEndElement(); //end AnalysisSoftwareList
         }
 
-        private void WriteAnalysisCollection(IOpenTDReport db,double FDR, int? dataFileId = null)
+        private void WriteAnalysisCollection(IOpenTDReport db, double FDR, int? dataFileId = null)
         {
-
-       
             var rawFiles = db.GetDataFiles();
             var resultSets = db.GetResultSets();
             var massTable = db.GetMassTable();
@@ -705,7 +690,7 @@ var dataFiles = db.GetDataFiles();
             foreach (var ResultSet in resultSets)
             {
                 //one for each result set?
-                
+
                 this.WriteStartElement("SpectrumIdentification");
                 this.WriteAttributeString("id", $"SI_{ResultSet.Key}");
                 this.WriteAttributeString("spectrumIdentificationProtocol_ref", $"SIP_{ResultSet.Key}");
@@ -722,46 +707,35 @@ var dataFiles = db.GetDataFiles();
                 }
                 else
                 {
- foreach (var raw in rawFiles)
-                {
-                    this.WriteStartElement("InputSpectra");
-                    this.WriteAttributeString("spectraData_ref", $"SD_{raw.Key}");
-                    this.WriteEndElement();
-
-
+                    foreach (var raw in rawFiles)
+                    {
+                        this.WriteStartElement("InputSpectra");
+                        this.WriteAttributeString("spectraData_ref", $"SD_{raw.Key}");
+                        this.WriteEndElement();
+                    }
                 }
-                }
-               
+
                 this.WriteStartElement("SearchDatabaseRef");
                 this.WriteAttributeString("searchDatabase_ref", "db1");
                 this.WriteEndElement();
 
-this.WriteEndElement();
+                this.WriteEndElement();
             }
-
-
 
             foreach (var ResultSet in resultSets)
             {
-             
-
                 this.WriteStartElement("ProteinDetection");
                 this.WriteAttributeString("id", $"PD_{ResultSet.Key}");
                 this.WriteAttributeString("proteinDetectionProtocol_ref", $"PDP_{ResultSet.Key}");
                 this.WriteAttributeString("proteinDetectionList_ref", $"PDL_{ResultSet.Key}");
                 //this.WriteAttributeString("activityDate", $"{DateTime.Now}");
 
+                this.WriteStartElement("InputSpectrumIdentifications");
+                this.WriteAttributeString("spectrumIdentificationList_ref", $"SIL_{ResultSet.Key}");
+                this.WriteEndElement();
 
-
-                    this.WriteStartElement("InputSpectrumIdentifications");
-                    this.WriteAttributeString("spectrumIdentificationList_ref", $"SIL_{ResultSet.Key}");
-                    this.WriteEndElement();
-
-              
                 this.WriteEndElement();
             }
-
-
 
             this.WriteEndElement();
 
@@ -778,12 +752,8 @@ this.WriteEndElement();
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("SearchType");
 
-         
-            
                 this.WriteCVParam("MS:1001083", "ms-ms search");
-                
 
-             
                 this.WriteEndElement();
 
                 this.WriteStartElement("AdditionalSearchParams"); //What to put here!? do UserPArams for now
@@ -799,8 +769,8 @@ this.WriteEndElement();
                     this.WriteCVParam("MS:1003140", "ProSight:Run Annotated Proteoform Search mode", "True");
                 }
                 if (ResultSetParameters.ContainsKey("delta_m"))
-                { 
-                if (ResultSetParameters["delta_m"] == "True")
+                {
+                    if (ResultSetParameters["delta_m"] == "True")
                     {
                         this.WriteCVParam("MS:1003138", "ProSight:Run delta m mode", "True");
                     }
@@ -810,26 +780,25 @@ this.WriteEndElement();
                     }
                 }
 
-                    foreach (var parameter in ResultSetParameters)
+                foreach (var parameter in ResultSetParameters)
                 {
                     if (parameter.Key != "fragment_tolerance" && parameter.Key != "precursor_window_tolerance" && parameter.Key != "delta_m")
-                        this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}",parameter.Value);
+                        this.WriteUserParam($"{ResultSet.Value} Parameter - {parameter.Key}", parameter.Value);
                 }
                 foreach (var parameterGroup in parameters)
                 {
                     if (parameterGroup.Key != "Generate Report" && parameterGroup.Key != "Generate SAS Input")
                     {
- foreach (var parameter in parameterGroup.Value)
-                    {
-                        this.WriteUserParam($"{parameterGroup.Key} - {parameter.Key}", parameter.Value);
+                        foreach (var parameter in parameterGroup.Value)
+                        {
+                            this.WriteUserParam($"{parameterGroup.Key} - {parameter.Key}", parameter.Value);
+                        }
                     }
-                    }
-                   
-                    
+
+
                 }
 
                 this.WriteEndElement();
-
 
                 this.WriteStartElement("MassTable");
                 this.WriteAttributeString("id", $"MT");
@@ -845,7 +814,7 @@ this.WriteEndElement();
                 //To Do add ambigous residues - what do the values mean!?
                 this.WriteEndElement();
 
-this.WriteStartElement("FragmentTolerance");
+                this.WriteStartElement("FragmentTolerance");
 
                 if (ResultSetParameters["fragment_tolerance"].TrimEnd(null).EndsWith("ppm"))
                 {
@@ -856,7 +825,7 @@ this.WriteStartElement("FragmentTolerance");
                 else if (ResultSetParameters["fragment_tolerance"].TrimEnd(null).EndsWith("Da"))
                 {
                     var tol = Double.Parse(ResultSetParameters["fragment_tolerance"].Remove(ResultSetParameters["fragment_tolerance"].LastIndexOf('D'), 2));
-                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}","UO", "UO:0000221", "dalton");
+                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000221", "dalton");
                     this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
                 }
 
@@ -866,92 +835,77 @@ this.WriteStartElement("FragmentTolerance");
                 this.WriteStartElement("precursor_window_tolerance");
                 if (ResultSetParameters.ContainsKey("precursor_window_tolerance"))
                 {
- if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("ppm"))
-                {
+                    if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("ppm"))
+                    {
 
-                    var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].IndexOf('p'), 3));
-                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
-                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
-                }
-                else if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("Da"))
-                {
-                    var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].LastIndexOf('D'), 2));
-                    this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000221", "dalton");
-                    this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
-                }
+                        var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].IndexOf('p'), 3));
+                        this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                        this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000169", "parts per million");
+                    }
+                    else if (ResultSetParameters["precursor_window_tolerance"].TrimEnd(null).EndsWith("Da"))
+                    {
+                        var tol = Double.Parse(ResultSetParameters["precursor_window_tolerance"].Remove(ResultSetParameters["precursor_window_tolerance"].LastIndexOf('D'), 2));
+                        this.WriteCVParam("MS:1001412", "search tolerance plus value", $"{ tol}", "UO", "UO:0000221", "dalton");
+                        this.WriteCVParam("MS:1001413", "search tolerance minus value", $"{ tol}", "UO", "UO:0000221", "dalton");
+                    }
                 }
                 else
                 {
                     this.WriteCVParam("MS:1001412", "search tolerance plus value", $"-1", "UO", "UO:0000221", "dalton");
                     this.WriteCVParam("MS:1001413", "search tolerance minus value", $"-1", "UO", "UO:0000221", "dalton");
                 }
-               
-              
 
                 this.WriteEndElement();
 
-
-
-
-
-this.WriteStartElement("Threshold");
+                this.WriteStartElement("Threshold");
 
                 this.WriteCVParam("MS:1002260", "PSM:FDR threshold", $"{FDR}");
                 this.WriteCVParam("MS:1002910", "proteoform-level global FDR threshold", $"{FDR}");
                 this.WriteCVParam("MS:1001448", "pep:FDR threshold", $"{FDR}");//do we need a proteoform level FDR CV?
                 this.WriteEndElement();
-this.WriteEndElement();
-                  
+                this.WriteEndElement();
             }
-
-
 
             //ForEach PDP
             foreach (var ResultSet in resultSets)
             {
                 this.WriteStartElement("ProteinDetectionProtocol");
                 this.WriteAttributeString("id", $"PDP_{ResultSet.Key}");
-          
+
                 this.WriteAttributeString("analysisSoftware_ref", "AS_TDPortal");
                 this.WriteStartElement("AnalysisParams");
-
-
 
                 //protein determination parameters and report generation?
 
                 if (parameters.ContainsKey("Generate Report"))
                 {
-    foreach (var par in parameters["Generate Report"])
-                {
-                    this.WriteUserParam($"Generate Report - {par.Key}", par.Value);
+                    foreach (var par in parameters["Generate Report"])
+                    {
+                        this.WriteUserParam($"Generate Report - {par.Key}", par.Value);
+                    }
                 }
-                }
-
 
                 if (parameters.ContainsKey("Generate SAS Input"))
                 {
-foreach (var par in parameters["Generate SAS Input"])
-                {
-                    this.WriteUserParam($"Generate SAS Input - {par.Key}", par.Value);
+                    foreach (var par in parameters["Generate SAS Input"])
+                    {
+                        this.WriteUserParam($"Generate SAS Input - {par.Key}", par.Value);
 
-                }
+                    }
                 }
 
                 this.WriteEndElement();
-             this.WriteStartElement("Threshold");
+                this.WriteStartElement("Threshold");
                 this.WriteCVParam("MS:1001447", "prot:FDR threshold", $"{FDR}"); //do we need a proteoform level FDR CV?
                 this.WriteEndElement();
-                this.WriteEndElement();  
-                
-            }
-
                 this.WriteEndElement();
+
             }
 
+            this.WriteEndElement();
+        }
 
-
-
-        private void WriteSequenceCollection(IOpenTDReport db, double FDR,int? dataFileId = null)
+        private void WriteSequenceCollection(IOpenTDReport db, double FDR, int? dataFileId = null)
         {
             this.WriteStartElement("SequenceCollection");
             var isofroms = db.GetDBSequences(FDR, dataFileId);
@@ -961,9 +915,7 @@ foreach (var par in parameters["Generate SAS Input"])
                 WriteSingleDBSequence(isform.ID, isform.Accession, isform.Sequence, "db1", isform.Description, isform.TaxonID, isform.SciName);
             }
 
-
             var peptides = db.GetChemicalProteoforms(FDR, dataFileId);
-
 
             //Write Peptides - using BiologicalProteoformId as id
             foreach (var peptide in peptides)
@@ -977,19 +929,19 @@ foreach (var par in parameters["Generate SAS Input"])
                 //C-Terminal Mods
                 if (peptide.CterminalModID != null)
                 {
-                    var Ctermmod = db.ModLookup(peptide.CterminalModID, peptide.CterminalModSetID,0,0);
+                    var Ctermmod = db.ModLookup(peptide.CterminalModID, peptide.CterminalModSetID, 0, 0);
                     this.WriteStartElement("Modification");
-                    this.WriteAttributeString("location", $"{peptide.Sequence.Length+1}");
+                    this.WriteAttributeString("location", $"{peptide.Sequence.Length + 1}");
                     this.WriteAttributeString("monoisotopicMassDelta", $"{Ctermmod.DiffMono}");
                     this.WriteAttributeString("avgMassDelta", $"{Ctermmod.DiffAverage}");
-                    this.WriteCVParam($"{peptide.CterminalModSetID}:{peptide.CterminalModID}",Ctermmod.ModName, cvRef: peptide.CterminalModSetID);
+                    this.WriteCVParam($"{peptide.CterminalModSetID}:{peptide.CterminalModID}", Ctermmod.ModName, cvRef: peptide.CterminalModSetID);
                     this.WriteEndElement();
 
                 }
                 //N-Terminal Mods
                 if (peptide.NterminalModID != null)
                 {
-                    var Ntermmod = db.ModLookup(peptide.NterminalModID, peptide.NterminalModSetID,0,0);
+                    var Ntermmod = db.ModLookup(peptide.NterminalModID, peptide.NterminalModSetID, 0, 0);
                     this.WriteStartElement("Modification");
                     this.WriteAttributeString("location", $"0");
                     this.WriteAttributeString("monoisotopicMassDelta", $"{Ntermmod.DiffMono}");
@@ -1000,11 +952,11 @@ foreach (var par in parameters["Generate SAS Input"])
                 //Add internal Mods
                 if (peptide.ModificationHash != null)
                 {
-                    var pepmods = db.ParseModHash(peptide.ModificationHash ,peptide.ID);
+                    var pepmods = db.ParseModHash(peptide.ModificationHash, peptide.ID);
                     foreach (var pepmod in pepmods)
                     {
                         this.WriteStartElement("Modification");
-                        this.WriteAttributeString("location", $"{pepmod.StartIndex+1}");
+                        this.WriteAttributeString("location", $"{pepmod.StartIndex + 1}");
                         this.WriteAttributeString("monoisotopicMassDelta", $"{pepmod.DiffMono}");
                         this.WriteAttributeString("avgMassDelta", $"{pepmod.DiffAverage}");
                         this.WriteAttributeString("residues", $"{pepmod.AminoAcid}");
@@ -1013,7 +965,6 @@ foreach (var par in parameters["Generate SAS Input"])
                     }
 
                 }
-                
 
                 //this.WriteEndElement();
                 this.WriteEndElement();
@@ -1063,17 +1014,15 @@ foreach (var par in parameters["Generate SAS Input"])
             this.WriteCVParam("MS:1001088", "protein description", proteinDescription);
             if (taxID > 0)
             {
- this.WriteCVParam("MS:1001469", "taxonomy: scientific name", sciName);
-            this.WriteCVParam("MS:1001467", "taxonomy: NCBI TaxID", $"{taxID}");
+                this.WriteCVParam("MS:1001469", "taxonomy: scientific name", sciName);
+                this.WriteCVParam("MS:1001467", "taxonomy: NCBI TaxID", $"{taxID}");
             }
-           
 
             this.WriteEndElement();
         }
 
         private void WriteProviderAndAuditCollection()
         {
-
             //provider section
             this.WriteStartElement("Provider");
             this.WriteAttributeString("id", "PROVIDER");
@@ -1085,7 +1034,6 @@ foreach (var par in parameters["Generate SAS Input"])
             this.WriteEndElement(); //end Role
             this.WriteEndElement(); //end contact role
             this.WriteEndElement(); //end Provider
-
 
             //Audit Collection - Could take user name - stick with Neil for now
             this.WriteStartElement("AuditCollection");
@@ -1113,13 +1061,9 @@ foreach (var par in parameters["Generate SAS Input"])
             this.WriteStartElement("Organization");
             this.WriteAttributeString("id", "ORG_DOC_OWNER");
 
-
             this.WriteEndElement(); //end Organization
-
             this.WriteEndElement(); //end AuditCollection
-
         }
-
 
         private void WriteMzIDCVList()
         {
@@ -1187,13 +1131,11 @@ foreach (var par in parameters["Generate SAS Input"])
 
         public void Dispose() => _writer?.Dispose();
 
-
-
         private static IOpenTDReport TDReportVersionCheck(string file)
         {
             try
             {
-                using (SqliteConnection connect = new SqliteConnection(@$"Data Source={file}"))
+                using (SqliteConnection connect = new(@$"Data Source={file}"))
                 {
                     connect.Open();
                     using (SqliteCommand fmd = connect.CreateCommand())
@@ -1201,19 +1143,18 @@ foreach (var par in parameters["Generate SAS Input"])
                         fmd.CommandText = @"SELECT *  FROM Taxon";
                         fmd.CommandType = System.Data.CommandType.Text;
                         SqliteDataReader r = fmd.ExecuteReader();
-                   
-                    }
-                    return new OpenTDReport_31(file);
 
+                    }
+
+                    Console.WriteLine("Found v3.1");
+                    return new OpenTDReport_31(file);
                 }
             }
-            catch 
-            { 
-                return new OpenTDReport_4(file) ; 
+            catch
+            {
+                Console.WriteLine("Found v4.0");
+                return new OpenTDReport_4(file);
             }
-           
-            
         }
-
     }
 }
