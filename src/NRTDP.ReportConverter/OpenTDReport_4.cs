@@ -453,7 +453,7 @@ namespace NRTDP.tdReportConverter
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
-
+                            orderby h.Id
                             where h.DataFileId == dataFileId &&
                                   h.ResultSetId == ResultSetId &&
                                   q1.GlobalQvalue < FDR && 
