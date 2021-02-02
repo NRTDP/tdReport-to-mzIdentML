@@ -335,11 +335,15 @@ namespace NRTDP.tdReportConverter
         // I don't like this! probably best to include this is the get petptides method
         public BioMod ModLookup(int? modId, string? ModificationSetId, int startIndex, int chemId)
         {
+
+
             Tuple<int?, string?> key = Tuple.Create(modId, ModificationSetId);
             if (!_modHash.ContainsKey(key))
                 _modHash.Add(key, (from x in _db.Modification
                                    where x.Id == modId && x.ModificationSetId == ModificationSetId
                                    select x).Single());
+            
+                
 
             var m = _modHash[key];
 

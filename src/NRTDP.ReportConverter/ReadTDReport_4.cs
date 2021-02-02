@@ -45,13 +45,14 @@ namespace NRTDP.TDReport4
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            options.UseSqlite($"Data Source={_tDReport}")
-                   .UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+            options.UseSqlite($"Data Source={_tDReport}");
+                  
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ResultParameter>().HasNoKey();
+            modelBuilder.Entity<Modification>().HasNoKey();
         }
     }
 
@@ -108,7 +109,7 @@ namespace NRTDP.TDReport4
     }
     public class Modification
     {
-        [Key]
+       
         public int Id { get; set; }
         public string ModificationSetId { get; set; }
 
