@@ -356,7 +356,8 @@ namespace NRTDP.tdReportConverter
                             this.WriteEndElement();
                         }
 
-                        this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
+                        this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.IsoformGlobalQvalue));
+                        this.WriteCVParam("MS: 1003135", "ProSight:protein Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.EntryGlobalQValue));
 
                         this.WriteEndElement();
                         this.WriteEndElement();
@@ -517,7 +518,7 @@ namespace NRTDP.tdReportConverter
                                 this.WriteEndElement();
 
                             }
-                            this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.GlobalQvalue));
+                            this.WriteCVParam("MS:1003134", "ProSight:isoform Q-value", String.Format("{0:e4}", isoforms[isoform.Key].FirstOrDefault().Value.IsoformGlobalQvalue));
 
 
                             this.WriteEndElement();

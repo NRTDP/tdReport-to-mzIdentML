@@ -567,16 +567,18 @@ namespace NRTDP.tdReportConverter
             var hit_quiry = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
-
+                            join i in _db.Isoform on bio.IsoformId equals i.Id
+                            join e in _db.Entry on i.EntryId equals e.Id
 
 
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                            join q3 in _db.GlobalQualitativeConfidence on new { ID = e.Id, agg = 3 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
 
 
                             where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id }
+                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id, entryQValue = q3.GlobalQvalue }
 
                              ;
 
@@ -590,11 +592,11 @@ namespace NRTDP.tdReportConverter
                 if (!outList.ContainsKey(hitscan.IsoformId))
                 {
                     outList[hitscan.IsoformId] = new Dictionary<int, ProteinAmbiguityGroup>();
-                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { GlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
+                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { EntryGlobalQValue = hitscan.entryQValue, IsoformGlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
                 }
                 else if (!outList[hitscan.IsoformId].ContainsKey(hitscan.ChemId))
                 {
-                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { GlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
+                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup {EntryGlobalQValue = hitscan.entryQValue, IsoformGlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
 
                 }
                 else
