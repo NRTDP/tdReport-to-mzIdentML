@@ -45,8 +45,9 @@ namespace NRTDP.TDReport4
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            options.UseSqlite($"Data Source={_tDReport}");
-                  
+            options.UseSqlite($"Data Source={_tDReport}")
+                   //.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()))
+                   ;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

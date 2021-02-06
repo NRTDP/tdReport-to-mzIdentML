@@ -342,8 +342,8 @@ namespace NRTDP.tdReportConverter
                 _modHash.Add(key, (from x in _db.Modification
                                    where x.Id == modId && x.ModificationSetId == ModificationSetId
                                    select x).Single());
-            
-                
+
+
 
             var m = _modHash[key];
 
@@ -456,8 +456,8 @@ namespace NRTDP.tdReportConverter
                             orderby h.Id
                             where h.DataFileId == dataFileId &&
                                   h.ResultSetId == ResultSetId &&
-                                  q1.GlobalQvalue < FDR && 
-                                  q2.GlobalQvalue < FDR && 
+                                  q1.GlobalQvalue < FDR &&
+                                  q2.GlobalQvalue < FDR &&
                                   SH.Level == 2
                             select new
                             {
@@ -563,25 +563,30 @@ namespace NRTDP.tdReportConverter
         /// <returns></returns>
         public Dictionary<int, Dictionary<int, ProteinAmbiguityGroup>> GetproteinDetectiondata(int ResultSetId, int dataFileId, double FDR = 0.05)
         {
-
             var hit_quiry = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                             join i in _db.Isoform on bio.IsoformId equals i.Id
-                            join e in _db.Entry on i.EntryId equals e.Id
-
-
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
-                            join q3 in _db.GlobalQualitativeConfidence on new { ID = e.Id, agg = 3 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
+                            join q3 in _db.GlobalQualitativeConfidence on new { ID = i.EntryId, agg = 3 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
 
+                            where h.DataFileId == dataFileId && 
+                                  h.ResultSetId == ResultSetId && 
+                                  q1.GlobalQvalue < FDR && 
+                                  q2.GlobalQvalue < FDR &&
+                                  q3.GlobalQvalue < FDR
 
-                            where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id, entryQValue = q3.GlobalQvalue }
-
-                             ;
-
+                            select new
+                            {
+                                gqvalue = q2.GlobalQvalue,
+                                ChemId = c.Id,
+                                HitId = h.Id,
+                                IsoformId = bio.IsoformId,
+                                BioId = bio.Id,
+                                entryQValue = q3.GlobalQvalue
+                            };
 
             var output = hit_quiry.ToList();
 
@@ -596,15 +601,13 @@ namespace NRTDP.tdReportConverter
                 }
                 else if (!outList[hitscan.IsoformId].ContainsKey(hitscan.ChemId))
                 {
-                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup {EntryGlobalQValue = hitscan.entryQValue, IsoformGlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
-
+                    outList[hitscan.IsoformId][hitscan.ChemId] = new ProteinAmbiguityGroup { EntryGlobalQValue = hitscan.entryQValue, IsoformGlobalQvalue = hitscan.gqvalue, BioId = new HashSet<int> { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = hitscan.IsoformId, HitId = new HashSet<int> { hitscan.HitId } };
                 }
                 else
                 {
                     outList[hitscan.IsoformId][hitscan.ChemId].HitId.Add(hitscan.HitId);
                     outList[hitscan.IsoformId][hitscan.ChemId].BioId.Add(hitscan.BioId);
                 }
-
             }
 
             return outList;
