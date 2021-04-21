@@ -112,20 +112,20 @@ namespace NRTDP.TDReport31
         public string Name { get; set; }
         public string Definition { get; set; }
         public string Comment { get; set; }
-        public double DiffAverage { get; set; }
-        public double DiffMonoisotopic { get; set; }
+        public double? DiffAverage { get; set; }
+        public double? DiffMonoisotopic { get; set; }
         public string DiffFormula { get; set; }
         public string Formula { get; set; }
         public double MassAverage { get; set; }
         public double MassMonoisotopic { get; set; }
         public string AminoAcid { get; set; }
-        public int Source { get; set; }
-        public int Terminus { get; set; }
-        public int FormalCharge { get; set; }
+        public int? Source { get; set; }
+        public int? Terminus { get; set; }
+        public int? FormalCharge { get; set; }
         public bool IsObsolete { get; set; }
         public bool IsRemoval { get; set; }
         public bool IsSnp { get; set; }
-        public int ModificationTypeId { get; set; }
+        public int? ModificationTypeId { get; set; }
 
 
     }

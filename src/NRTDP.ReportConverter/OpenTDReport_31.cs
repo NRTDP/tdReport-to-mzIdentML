@@ -11,6 +11,7 @@ namespace NRTDP.tdReportConverter
         private string _path;
         private Dictionary<string, int> _scoreType = new Dictionary<string, int>();
 
+        private Dictionary<Tuple<int?, string?>, Modification> _modHash = new Dictionary<Tuple<int?, string?>, Modification>();
 
         public OpenTDReport_31(string path)
         {
@@ -314,12 +315,26 @@ namespace NRTDP.tdReportConverter
         // I don;t like this! probably best to include this is the get petptides method
         public BioMod ModLookup(int? modId, string? ModificationSetId, int startIndex, int chemId)
         {
-            var entry_quiry = from m in _db.Modification
 
-                              where m.Id == modId && m.ModificationSetId == ModificationSetId
-                              select new BioMod { DiffAverage = m.DiffAverage, DiffMono = m.DiffMonoisotopic, ModName = m.Name, AminoAcid = m.AminoAcid, ModSetId = ModificationSetId, ModId = modId, StartIndex = startIndex, ChemId = chemId }
-                               ;
-            return entry_quiry.FirstOrDefault();
+            Tuple<int?, string?> key = Tuple.Create(modId, ModificationSetId);
+            if (!_modHash.ContainsKey(key))
+                _modHash.Add(key, (from x in _db.Modification
+                                   where x.Id == modId && x.ModificationSetId == ModificationSetId
+                                   select x).Single());
+
+            var m = _modHash[key];
+
+            return new BioMod
+            {
+                DiffAverage = m.DiffAverage,
+                DiffMono = m.DiffMonoisotopic,
+                ModName = m.Name,
+                AminoAcid = m.AminoAcid,
+                ModSetId = ModificationSetId,
+                ModId = modId,
+                StartIndex = startIndex,
+                ChemId = chemId
+            };
 
         }
 
@@ -400,12 +415,13 @@ namespace NRTDP.tdReportConverter
 
 
             //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
-            var hit_quiry = from h in _db.Hit
+            //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
+            var hit_query = from h in _db.Hit
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                             join hToS in _db.HitToSpectrum on h.Id equals hToS.HitId
                             join sToSH in _db.ScanHeaderToSpectrum on hToS.SpectrumId equals sToSH.SpectrumId
-                            join SH in _db.ScanHeader on new { ID = sToSH.ScanHeaderId, DF = dataFileId } equals new { ID = SH.Id, DF = SH.DataFileId }
+                            join SH in _db.ScanHeader on sToSH.ScanHeaderId equals SH.Id
 
                             join ps in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_pScore"] } equals new { id = ps.HitId, type = ps.ScoreTypeId }
                             join es in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_eValue"] } equals new { id = es.HitId, type = es.ScoreTypeId }
@@ -414,29 +430,95 @@ namespace NRTDP.tdReportConverter
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
+                            orderby h.Id
+                            where h.DataFileId == dataFileId &&
+                                  h.ResultSetId == ResultSetId &&
+                                  q1.GlobalQvalue < FDR &&
+                                  q2.GlobalQvalue < FDR &&
+                                  SH.Level == 2
+                            select new
+                            {
+                                gqvalue = q1.GlobalQvalue,
+                                pscore = ps.Value,
+                                escore = es.Value,
+                                cscore = cs.Value,
+                                Cleavages = pcs.Value,
+                                ChemId = c.Id,
+                                HitId = h.Id,
+                                ObsPreMass = h.ObservedPrecursorMass,
+                                TheoPreMass = c.MonoisotopicMass,
+                                IsoformId = bio.IsoformId,
+                                BioId = bio.Id,
+                                ScanNo = SH.ScanIndex
+                            };
 
-
-                            where SH.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR && SH.Level == 2
-                            select new { gqvalue = q1.GlobalQvalue, pscore = ps.Value, escore = es.Value, cscore = cs.Value, Cleavages = pcs.Value, ChemId = c.Id, HitId = h.Id, ObsPreMass = h.ObservedPrecursorMass, TheoPreMass = c.MonoisotopicMass, IsoformId = bio.IsoformId, BioId = bio.Id, ScanNo = SH.ScanIndex }
-
-                              ;
-
-
-            var output = hit_quiry.ToList();
+            var output = hit_query.ToList();
 
             var outList = new Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>>();
 
+            var fragmentMap = (from h in _db.Hit
+                               join f in _db.MatchingIon on h.Id equals f.HitId
+                               where h.DataFileId == dataFileId &&
+                                     h.ResultSetId == ResultSetId
+                               select new FragmentIon
+                               {
+                                   HitId = h.Id,
+                                   ObservedMz = f.ObservedMz,
+                                   TheoreticalMz = f.TheoreticalMz,
+                                   Charge = f.Charge,
+                                   IonNumber = f.IonNumber,
+                                   IonType = f.IonTypeId
+                               })
+                    .AsEnumerable().GroupBy(x => x.HitId).ToDictionary(x => x.Key, x => GetFragmentsforHit(x));
+
+            Dictionary<int, Dictionary<string, IList<FragmentIon>>> GetFragmentsforHit(IEnumerable<FragmentIon> fragments)
+            {
+                var chargeIonTypeFragDict = new Dictionary<int, Dictionary<string, IList<FragmentIon>>>();
+
+                foreach (var ion in fragments)
+                {
+                    if (!chargeIonTypeFragDict.ContainsKey(ion.Charge))
+                    {
+                        chargeIonTypeFragDict[ion.Charge] = new Dictionary<string, IList<FragmentIon>>();
+                        chargeIonTypeFragDict[ion.Charge][ion.IonType] = new List<FragmentIon> { ion };
+                    }
+                    else if (!chargeIonTypeFragDict[ion.Charge].ContainsKey(ion.IonType))
+                    {
+                        chargeIonTypeFragDict[ion.Charge][ion.IonType] = new List<FragmentIon> { ion };
+                    }
+                    else
+                    {
+                        chargeIonTypeFragDict[ion.Charge][ion.IonType].Add(ion);
+                    }
+                }
+
+                return chargeIonTypeFragDict;
+            }
+
             foreach (var hitscan in output)
             {
-                if (!outList.ContainsKey(hitscan.ScanNo))
+                if (!outList.ContainsKey(hitscan.ScanNo) || !outList[hitscan.ScanNo].ContainsKey(hitscan.HitId))
                 {
-                    outList[hitscan.ScanNo] = new Dictionary<int, SpectrumIdentificationItem_Hit>();
-                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { GlobalQValue = hitscan.gqvalue, BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId), PScore = hitscan.pscore, CScore = hitscan.cscore, EValue = hitscan.escore, Cleavages = hitscan.Cleavages };
-                }
-                else if (!outList[hitscan.ScanNo].ContainsKey(hitscan.HitId))
-                {
-                    outList[hitscan.ScanNo][hitscan.HitId] = new SpectrumIdentificationItem_Hit { GlobalQValue = hitscan.gqvalue, BioId = new HashSet<int>() { hitscan.BioId }, ChemId = hitscan.ChemId, IsoformId = new HashSet<int>() { hitscan.IsoformId }, ObsPreMass = hitscan.ObsPreMass, TheoPreMass = hitscan.TheoPreMass, Scans = new HashSet<int>() { hitscan.ScanNo }, FragmentIons = this.GetFragmentsforHit(hitscan.HitId), PScore = hitscan.pscore, CScore = hitscan.cscore, EValue = hitscan.escore, Cleavages = hitscan.Cleavages };
+                    var hit = new SpectrumIdentificationItem_Hit
+                    {
+                        GlobalQValue = hitscan.gqvalue,
+                        BioId = new HashSet<int>() { hitscan.BioId },
+                        ChemId = hitscan.ChemId,
+                        IsoformId = new HashSet<int>() { hitscan.IsoformId },
+                        ObsPreMass = hitscan.ObsPreMass,
+                        TheoPreMass = hitscan.TheoPreMass,
+                        Scans = new HashSet<int>() { hitscan.ScanNo },
+                        FragmentIons = fragmentMap[hitscan.HitId], //this.GetFragmentsforHit(hitscan.HitId),
+                        PScore = hitscan.pscore,
+                        CScore = hitscan.cscore,
+                        EValue = hitscan.escore,
+                        Cleavages = hitscan.Cleavages
+                    };
 
+                    if (!outList.ContainsKey(hitscan.ScanNo))
+                        outList[hitscan.ScanNo] = new Dictionary<int, SpectrumIdentificationItem_Hit>();
+
+                    outList[hitscan.ScanNo][hitscan.HitId] = hit;
                 }
                 else
                 {
@@ -445,7 +527,7 @@ namespace NRTDP.tdReportConverter
                     outList[hitscan.ScanNo][hitscan.HitId].BioId.Add(hitscan.BioId);
                 }
             }
-            //Create Dictonary and group everything
+
             return outList;
         }
 
@@ -457,19 +539,28 @@ namespace NRTDP.tdReportConverter
                             join bio in _db.BiologicalProteoform on h.ChemicalProteoformId equals bio.ChemicalProteoformId
                             join c in _db.ChemicalProteoform on h.ChemicalProteoformId equals c.Id
                             join i in _db.Isoform on bio.IsoformId equals i.Id
-                            join e in _db.Entry on i.EntryId equals e.Id
-
-
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
-                            join q3 in _db.GlobalQualitativeConfidence on new { ID = e.Id, agg = 3 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
+                            join q3 in _db.GlobalQualitativeConfidence on new { ID = i.EntryId, agg = 3 } equals new { ID = q3.ExternalId, agg = q3.AggregationLevel }
 
+                            where h.DataFileId == dataFileId &&
+                                  h.ResultSetId == ResultSetId &&
+                                  q1.GlobalQvalue < FDR &&
+                                  q2.GlobalQvalue < FDR &&
+                                  q3.GlobalQvalue < FDR
 
-                            where h.DataFileId == dataFileId && h.ResultSetId == ResultSetId && q1.GlobalQvalue < FDR && q2.GlobalQvalue < FDR
-                            select new { gqvalue = q2.GlobalQvalue, ChemId = c.Id, HitId = h.Id, IsoformId = bio.IsoformId, BioId = bio.Id, entryQValue = q3.GlobalQvalue }
+                            select new
+                            {
+                                gqvalue = q2.GlobalQvalue,
+                                ChemId = c.Id,
+                                HitId = h.Id,
+                                IsoformId = bio.IsoformId,
+                                BioId = bio.Id,
+                                entryQValue = q3.GlobalQvalue
+                            };
 
-                             ;
+            ;
 
 
             var output = hit_quiry.ToList();
@@ -561,11 +652,11 @@ namespace NRTDP.tdReportConverter
         public int ChemId { get; set; }
         public string ModSetId { get; set; }
         public int? ModId { get; set; }
-        public int ModTypeId { get; set; }
+        public int? ModTypeId { get; set; }
         public int StartIndex { get; set; }
         public string ModName { get; set; }
-        public double DiffAverage { get; set; }
-        public double DiffMono { get; set; }
+        public double? DiffAverage { get; set; }
+        public double? DiffMono { get; set; }
         public string AminoAcid { get; set; }
     }
     public class DBSequence
