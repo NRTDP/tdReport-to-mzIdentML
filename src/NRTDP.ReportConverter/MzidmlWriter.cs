@@ -311,8 +311,9 @@ namespace NRTDP.tdReportConverter
                             this.WriteCVParam("MS:1003127", "ProSight:spectral E-value", String.Format("{0:g2}", hit.Value.EValue));
                             this.WriteCVParam("MS:1003128", "ProSight:spectral C-score", String.Format("{0:g4}", hit.Value.CScore));
                             this.WriteCVParam("MS:1003125", "ProSight:spectral Q-value", String.Format("{0:e4}", hit.Value.GlobalQValue));
-
-                            this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages)); // is there a CV for this?
+                            
+                            if (hit.Value.Cleavages.HasValue)
+                                this.WriteUserParam("Percentage of Inter-Residue Cleavages Observed", String.Format("{0:p0}", hit.Value.Cleavages.Value)); // is there a CV for this?
 
 
                             this.WriteEndElement();

@@ -44,8 +44,15 @@ namespace NRTDP.TDReport31
         public DbSet<ScoreType> ScoreType { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
+        {
+options.UseSqlite($"Data Source={_tDReport}") ;
+            options.EnableDetailedErrors();
+            options.EnableSensitiveDataLogging();
+        }
 
-            => options.UseSqlite($"Data Source={_tDReport}");
+                 
+
+
 
 
 
@@ -191,7 +198,7 @@ namespace NRTDP.TDReport31
         public int HitId { get; set; }
 
         public int ScoreTypeId { get; set; }
-        public double Value { get; set; }
+        public double? Value { get; set; }
     }
     public class DecoyScore
     {

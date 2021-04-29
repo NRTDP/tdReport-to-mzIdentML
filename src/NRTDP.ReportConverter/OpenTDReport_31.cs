@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NRTDP.TDReport31;
 
 namespace NRTDP.tdReportConverter
@@ -412,8 +414,6 @@ namespace NRTDP.tdReportConverter
         public Dictionary<int, Dictionary<int, SpectrumIdentificationItem_Hit>> CreateBatchOfHitsWithIons(int ResultSetId, int dataFileId, double FDR = 0.05)
         {
 
-
-
             //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
             //get the hits - need Isoform ID, chemId, all bioIds, scan no - group by hit, have multi hits for different scans seperate
             var hit_query = from h in _db.Hit
@@ -426,7 +426,12 @@ namespace NRTDP.tdReportConverter
                             join ps in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_pScore"] } equals new { id = ps.HitId, type = ps.ScoreTypeId }
                             join es in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_eValue"] } equals new { id = es.HitId, type = es.ScoreTypeId }
                             join cs in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_cScore"] } equals new { id = cs.HitId, type = cs.ScoreTypeId }
-                            join pcs in _db.HitScore on new { id = h.Id, type = _scoreType["kelleher_interResidueCleavages"] } equals new { id = pcs.HitId, type = pcs.ScoreTypeId }
+
+                            // found a tdreport without this
+                            join pcs in _db.HitScore on 
+                           new { id = h.Id, type = _scoreType.ContainsKey("kelleher_interResidueCleavages") ?_scoreType["kelleher_interResidueCleavages"]: -1 } equals (new { id = pcs.HitId, type = pcs.ScoreTypeId }) into grouping
+
+                            from p in grouping.DefaultIfEmpty()
 
                             join q1 in _db.GlobalQualitativeConfidence on new { ID = h.Id, agg = 0 } equals new { ID = q1.HitId, agg = q1.AggregationLevel }
                             join q2 in _db.GlobalQualitativeConfidence on new { ID = bio.IsoformId, agg = 2 } equals new { ID = q2.ExternalId, agg = q2.AggregationLevel }
@@ -442,7 +447,7 @@ namespace NRTDP.tdReportConverter
                                 pscore = ps.Value,
                                 escore = es.Value,
                                 cscore = cs.Value,
-                                Cleavages = pcs.Value,
+                                Cleavages = p != null ? p.Value: null,
                                 ChemId = c.Id,
                                 HitId = h.Id,
                                 ObsPreMass = h.ObservedPrecursorMass,
@@ -509,9 +514,9 @@ namespace NRTDP.tdReportConverter
                         TheoPreMass = hitscan.TheoPreMass,
                         Scans = new HashSet<int>() { hitscan.ScanNo },
                         FragmentIons = fragmentMap[hitscan.HitId], //this.GetFragmentsforHit(hitscan.HitId),
-                        PScore = hitscan.pscore,
-                        CScore = hitscan.cscore,
-                        EValue = hitscan.escore,
+                        PScore = hitscan.pscore.Value,
+                        CScore = hitscan.cscore.Value,
+                        EValue = hitscan.escore.Value,
                         Cleavages = hitscan.Cleavages
                     };
 
@@ -626,7 +631,7 @@ namespace NRTDP.tdReportConverter
         public double PScore { get; set; }
         public double EValue { get; set; }
         public double CScore { get; set; }
-        public double Cleavages { get; set; }
+        public double? Cleavages { get; set; }
         public double GlobalQValue { get; set; }
         public double ChemQvalue { get; set; }
 
@@ -719,4 +724,5 @@ namespace NRTDP.tdReportConverter
 
 
     }
+
 }
