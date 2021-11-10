@@ -238,7 +238,7 @@ namespace NRTDP.tdReportConverter
                     this.WriteEndElement();
 
                     this.WriteStartElement("m_error");
-                    this.WriteAttributeString("id", "m_mz");
+                    this.WriteAttributeString("id", "m_error");
                     this.WriteCVParam("MS:1001227", "product ion m/z error", unitRef: "PSI-MS", unitAccession: "MS:1000040", unitName: "m/z");
                     this.WriteEndElement();
                     this.WriteEndElement();
@@ -387,7 +387,7 @@ namespace NRTDP.tdReportConverter
                     this.WriteEndElement();
 
                     this.WriteStartElement("m_error");
-                    this.WriteAttributeString("id", "m_mz");
+                    this.WriteAttributeString("id", "m_error");
                     this.WriteCVParam("MS:1001227", "product ion m/z error", unitRef: "PSI-MS", unitAccession: "MS:1000040", unitName: "m/z");
                     this.WriteEndElement();
                     this.WriteEndElement();

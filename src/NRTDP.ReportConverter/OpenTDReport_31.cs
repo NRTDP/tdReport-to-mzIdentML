@@ -429,7 +429,7 @@ namespace NRTDP.tdReportConverter
 
                             // found a tdreport without this
                             join pcs in _db.HitScore on 
-                           new { id = h.Id, type = _scoreType.ContainsKey("kelleher_interResidueCleavages") ?_scoreType["kelleher_interResidueCleavages"]: -1 } equals (new { id = pcs.HitId, type = pcs.ScoreTypeId }) into grouping
+                            new { id = h.Id, type = _scoreType.ContainsKey("kelleher_interResidueCleavages") ?_scoreType["kelleher_interResidueCleavages"]: -1 } equals (new { id = pcs.HitId, type = pcs.ScoreTypeId }) into grouping
 
                             from p in grouping.DefaultIfEmpty()
 
