@@ -47,7 +47,7 @@ namespace NRTDP.tdReportConverter
                                       ID = I.Id,
                                       Accession = I.AccessionNumber,
                                       Sequence = I.Sequence,
-                                      UniProtID = e.UniProtId,
+                                      //UniProtID = e.UniProtId,
                                       TaxonID = e.TaxonId,
                                       SciName = "UnIdenitified", //Implement a lookup?
                                       Description = e.Description
@@ -60,7 +60,7 @@ namespace NRTDP.tdReportConverter
                                       ID = group1.Key,
                                       Accession = group1.Max(x => x.Accession),
                                       Sequence = group1.Max(x => x.Sequence),
-                                      UniProtID = group1.Max(x => x.UniProtID),
+                                      //UniProtID = group1.Max(x => x.UniProtID),
                                       TaxonID = group1.Max(x => x.TaxonID),
                                       SciName = "UnIdenitified", //Implement a lookup? - this was removed moving from 3.0 -> 4.0
                                       Description = group1.Max(x => x.Description)
@@ -82,7 +82,7 @@ namespace NRTDP.tdReportConverter
                                       ID = I.Id,
                                       Accession = I.AccessionNumber,
                                       Sequence = I.Sequence,
-                                      UniProtID = e.UniProtId,
+                                      //UniProtID = e.UniProtId,
                                       TaxonID = e.TaxonId,
                                       SciName = "UnIdenitified", //Implement a lookup?
                                       Description = e.Description
@@ -93,7 +93,7 @@ namespace NRTDP.tdReportConverter
                                       ID = group1.Key,
                                       Accession = group1.Max(x => x.Accession),
                                       Sequence = group1.Max(x => x.Sequence),
-                                      UniProtID = group1.Max(x => x.UniProtID),
+                                      //UniProtID = group1.Max(x => x.UniProtID),
                                       TaxonID = group1.Max(x => x.TaxonID),
                                       SciName = "UnIdenitified", //Implement a lookup?
                                       Description = group1.Max(x => x.Description)

@@ -122,14 +122,14 @@ namespace NRTDP.tdReportConverter
         /// <param name="TDReport">The file path for the tdReport</param>
         /// <param name="outputFolder">The output folder for the compressed mzidml files</param>
         /// <param name="FDR">The False Discovery Rate (FDR) used to filter the results</param>
-        public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05)
+        public static void ConvertToSeperateMzId(string TDReport, string outputFolder, double FDR = 0.05, IProgress<double>? progress = null)
         {
             var inputFileInfo = new FileInfo(TDReport);
 
             var _db = TDReportVersionCheck(inputFileInfo.FullName);
 
             var datasets = _db.GetDataFiles();
-
+            int count = 0;
             foreach (var dataset in datasets)
             {
                 var rawFileName = dataset.Value.Item1;
@@ -148,6 +148,7 @@ namespace NRTDP.tdReportConverter
                     writer.WriteAnalysisCollection(_db, FDR, dataset.Key);
                     writer.WriteDataCollection(_db, inputFileInfo, FDR, dataset.Key);
                 }
+                progress?.Report((double)++count / datasets.Count);
             }
             _db.Dispose();
         }
